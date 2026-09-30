@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The frontend (Vite) already fingerprints its own output filenames for cache
+         busting. The SDK's own static web assets manifest/fingerprinting system was
+         intercepting every wwwroot request and serving index.html instead of the
+         real file, regardless of the file actually being present on disk — disabling
+         it makes UseStaticFiles() do a plain, reliable physical-file lookup instead. -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+  </ItemGroup>
+
+</Project>

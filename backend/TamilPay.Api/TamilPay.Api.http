@@ -1,0 +1,32 @@
+@TamilPay.Api_HostAddress = http://localhost:5109
+
+### Log in — use your own credentials
+POST {{TamilPay.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "<login id>",
+  "password": "<password>"
+}
+
+### List roles
+GET {{TamilPay.Api_HostAddress}}/api/roles
+Accept: application/json
+
+### The master client (the only one this app serves)
+GET {{TamilPay.Api_HostAddress}}/api/clients
+Accept: application/json
+
+### List customers — always scoped to the master client; a clientId in the query is ignored
+GET {{TamilPay.Api_HostAddress}}/api/customers
+Accept: application/json
+
+### Get one customer
+GET {{TamilPay.Api_HostAddress}}/api/customers/{{customerId}}
+Accept: application/json
+
+### Payment status by reference number
+GET {{TamilPay.Api_HostAddress}}/api/pg/status?referenceId=<reference number>
+Accept: application/json
+
+###
