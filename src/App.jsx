@@ -16,6 +16,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import WalletSettlementPage from './pages/WalletSettlementPage';
 import QrCodesPage from './pages/QrCodesPage';
 import QrRequestsPage from './pages/QrRequestsPage';
+import CardPaymentsPage from './pages/CardPaymentsPage';
 import PgStatusPage from './pages/PgStatusPage';
 import { fromPath, toPath } from './utils/router';
 import { apiUrl } from './utils/api';
@@ -35,6 +36,7 @@ const PAGES = {
   walletSettlement: WalletSettlementPage,
   qrCodes: QrCodesPage,
   qrRequests: QrRequestsPage,
+  cardPayments: CardPaymentsPage,
 };
 
 const SESSION_KEY = 'tamilpay_user';

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import QRCode from 'qrcode';
 import {
-  ArrowRight, Check, ChevronDown, CreditCard, FileChartColumn, Handshake, Landmark,
+  ArrowRight, Check, ChevronDown, CreditCard, FileChartColumn, Landmark,
   LayoutGrid, QrCode, ScanQrCode, SendHorizontal, Settings, Smartphone, TvMinimal,
-  WalletMinimal, X, Zap,
+  WalletCards, WalletMinimal, X, Zap,
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { apiUrl } from '../utils/api';
@@ -226,7 +226,7 @@ const HomePage = ({ onNavigate, user }) => {
       items: [
         { label: 'IMPS', Icon: SendHorizontal, live: true, onClick: () => onNavigate?.('imps') },
         { label: 'Self Settlement', Icon: WalletMinimal },
-        { label: 'Vendor Settlement', Icon: Handshake },
+        { label: 'Card Payments', Icon: WalletCards, live: true, onClick: () => onNavigate?.('cardPayments') },
       ],
     },
     {

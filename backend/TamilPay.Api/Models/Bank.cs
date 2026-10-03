@@ -11,6 +11,8 @@ public class Bank
     [JsonPropertyName("BankName")]
     public string BankName { get; set; } = string.Empty;
 
-    [JsonPropertyName("IFSC")]
+    // The upstream calls this IFSC_Code. Read as "IFSC" it came through empty for every
+    // bank, so choosing a bank never filled in its IFSC.
+    [JsonPropertyName("IFSC_Code")]
     public string Ifsc { get; set; } = string.Empty;
 }

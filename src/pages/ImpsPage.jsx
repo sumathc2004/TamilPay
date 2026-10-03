@@ -8,10 +8,9 @@ import { apiUrl } from '../utils/api';
 import { MASTER_CLIENT_ID } from '../utils/customer';
 import { loadImageAsDataUrl } from '../utils/pdf';
 import Modal from '../components/Modal';
+import BankCombobox from '../components/BankCombobox';
 import tamilPayLogo from '../assets/images/tamilpay-logo.png';
 
-const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-const AADHAAR_PATTERN = /^\d{12}$/;
 const INDIAN_MOBILE_PATTERN = /^[6-9]\d{9}$/;
 const IFSC_PATTERN = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const ACCOUNT_NUMBER_PATTERN = /^\d{9,18}$/;
@@ -280,18 +279,6 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
   const validate = () => {
     const errors = {};
     if (!form.senderName.trim()) errors.senderName = 'Sender name is required.';
-    if (!form.senderAddress.trim()) errors.senderAddress = 'Sender address is required.';
-
-    const hasPan = form.senderPan.trim().length > 0;
-    const hasAadhaar = form.senderAadhaar.trim().length > 0;
-
-    if (hasPan && !PAN_PATTERN.test(form.senderPan)) errors.senderPan = 'Enter a valid PAN, e.g. AAAAA0000A.';
-    if (hasAadhaar && !AADHAAR_PATTERN.test(form.senderAadhaar)) errors.senderAadhaar = 'Aadhaar must be exactly 12 digits.';
-
-    if (!hasPan && !hasAadhaar) {
-      errors.senderPan = 'Provide either PAN or Aadhaar.';
-      errors.senderAadhaar = 'Provide either PAN or Aadhaar.';
-    }
 
     return errors;
   };
@@ -318,9 +305,6 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
           clientId: MASTER_CLIENT_ID,
           mobileNumber,
           senderName: form.senderName.trim(),
-          senderAddress: form.senderAddress.trim(),
-          senderPan: form.senderPan.trim().toUpperCase(),
-          senderAadhaar: form.senderAadhaar.trim(),
         }),
       });
 
@@ -352,8 +336,8 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
   const validateBank = () => {
     const errors = {};
     if (!bankForm.accountHolderName.trim()) errors.accountHolderName = 'Account holder name is required.';
-    if (!ACCOUNT_NUMBER_PATTERN.test(bankForm.accountNumber)) errors.accountNumber = 'Enter a valid account number.';
-    if (!IFSC_PATTERN.test(bankForm.ifsc)) errors.ifsc = 'Enter a valid IFSC code, e.g. SBIN0013351.';
+    if (!ACCOUNT_NUMBER_PATTERN.test(bankForm.accountNumber.trim())) errors.accountNumber = 'Enter a valid account number.';
+    if (!IFSC_PATTERN.test(bankForm.ifsc.trim().toUpperCase())) errors.ifsc = 'Enter a valid IFSC code, e.g. SBIN0013351.';
     if (!bankForm.bankName.trim()) errors.bankName = 'Bank name is required.';
     return errors;
   };
@@ -365,12 +349,12 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
       setVerifyError('Select a bank first.');
       return;
     }
-    if (!ACCOUNT_NUMBER_PATTERN.test(bankForm.accountNumber)) {
+    if (!ACCOUNT_NUMBER_PATTERN.test(bankForm.accountNumber.trim())) {
       setVerifyError('Enter a valid account number first.');
       return;
     }
-    if (!IFSC_PATTERN.test(bankForm.ifsc)) {
-      setVerifyError('Enter a valid IFSC code first.');
+    if (!IFSC_PATTERN.test(bankForm.ifsc.trim().toUpperCase())) {
+      setVerifyError('Select a bank to fill in the IFSC code first.');
       return;
     }
 
@@ -837,12 +821,13 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
               <span style={{ fontWeight: 700, color: 'var(--theme-heading)' }}>{sender.SenderName}</span>
               <span style={{ color: '#B0B8C4' }}>|</span>
               <span style={{ color: '#4A5568' }}>{sender.mobileNumber}</span>
-              <span style={{ color: '#B0B8C4' }}>|</span>
-              <span style={{ color: '#4A5568' }}>{sender.SenderAddress}</span>
-              <span style={{ color: '#B0B8C4' }}>|</span>
-              <span style={{ color: '#4A5568' }}>{sender.senderPan}</span>
-              <span style={{ color: '#B0B8C4' }}>|</span>
-              <span style={{ color: '#4A5568' }}>{sender.senderAadhaar}</span>
+              {/* Senders registered earlier may carry these; new ones are name-only. */}
+              {[sender.SenderAddress, sender.senderPan, sender.senderAadhaar].filter(Boolean).map((detail) => (
+                <React.Fragment key={detail}>
+                  <span style={{ color: '#B0B8C4' }}>|</span>
+                  <span style={{ color: '#4A5568' }}>{detail}</span>
+                </React.Fragment>
+              ))}
             </div>
           )}
 
@@ -896,19 +881,16 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
               <form onSubmit={handleAddBankAccount}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0 20px' }}>
                   <Field label="Bank Name" error={bankFieldErrors.bankName}>
-                    <select
-                      className="form-input no-icon"
+                    <BankCombobox
+                      banks={banks}
                       value={bankForm.bankName}
-                      onChange={(e) => {
-                        const bank = banks.find((b) => b.BankName === e.target.value);
-                        setBankForm((f) => ({ ...f, bankName: e.target.value, ifsc: bank?.IFSC ?? f.ifsc }));
-                      }}
-                    >
-                      <option value="">Select bank…</option>
-                      {banks.map((b) => (
-                        <option key={b.BankCode} value={b.BankName}>{b.BankName}</option>
-                      ))}
-                    </select>
+                      onSelect={(bank) => setBankForm((f) => ({
+                        ...f,
+                        bankName: bank?.BankName ?? '',
+                        // Keep what is typed in the IFSC box if the choice is cleared mid-edit.
+                        ifsc: bank?.IFSC_Code || f.ifsc,
+                      }))}
+                    />
                   </Field>
 
                   <Field label="Account Number" error={bankFieldErrors.accountNumber}>
@@ -922,10 +904,10 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
                   <Field label="IFSC Code" error={bankFieldErrors.ifsc}>
                     <input
                       type="text" className="form-input no-icon"
-                      placeholder={selectedBank ? `e.g. ${selectedBank.IFSC}` : 'e.g. ABCD0123456'}
+                      placeholder={selectedBank ? `e.g. ${selectedBank.IFSC_Code}` : 'e.g. ABCD0123456'}
                       maxLength={11}
                       style={{ textTransform: 'uppercase' }}
-                      value={bankForm.ifsc} onChange={updateBankField('ifsc')}
+                      value={bankForm.ifsc} onChange={(e) => setBankForm((b) => ({ ...b, ifsc: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) }))}
                     />
                   </Field>
 
@@ -1340,36 +1322,12 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
               Register IMPS Sender
             </h1>
             <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: '#7C8491', margin: '0 0 20px' }}>
-              No sender is registered for <strong>{mobileNumber}</strong> yet. Fill these in once to enable IMPS transfers.
+              No sender is registered for <strong>{mobileNumber}</strong> yet. Enter the sender's name once to enable IMPS transfers.
             </p>
 
             <form onSubmit={handleRegister}>
               <Field label="Sender Name" error={fieldErrors.senderName}>
                 <input type="text" className="form-input no-icon" value={form.senderName} onChange={updateField('senderName')} required />
-              </Field>
-
-              <Field label="Sender Address" error={fieldErrors.senderAddress}>
-                <input type="text" className="form-input no-icon" value={form.senderAddress} onChange={updateField('senderAddress')} required />
-              </Field>
-
-              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12.5, color: '#7C8491', margin: '-6px 0 14px' }}>
-                Provide at least one of PAN or Aadhaar.
-              </p>
-
-              <Field label="PAN" error={fieldErrors.senderPan}>
-                <input
-                  type="text" className="form-input no-icon" placeholder="AAAAA0000A" maxLength={10}
-                  style={{ textTransform: 'uppercase' }}
-                  value={form.senderPan} onChange={updateField('senderPan')}
-                />
-              </Field>
-
-              <Field label="Aadhaar" error={fieldErrors.senderAadhaar}>
-                <input
-                  type="text" inputMode="numeric" className="form-input no-icon" placeholder="123412341234" maxLength={12}
-                  value={form.senderAadhaar}
-                  onChange={(e) => setForm((f) => ({ ...f, senderAadhaar: e.target.value.replace(/\D/g, '').slice(0, 12) }))}
-                />
               </Field>
 
               {formError && <p style={fieldErrorStyle}>{formError}</p>}

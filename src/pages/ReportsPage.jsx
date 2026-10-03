@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, QrCode, Receipt } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, QrCode, Receipt, Search, WalletCards, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { apiUrl } from '../utils/api';
 import { loadImageAsDataUrl } from '../utils/pdf';
@@ -127,7 +127,55 @@ const buildReports = (isAdmin) => ({
     exportWidths: [0.35, 1.3, 1, 1.1, 1.1, 0.7, 0.85, 0.85, ...(isAdmin ? [0.95, 0.8] : []), 0.8, 1.3, 1],
     exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', ...(isAdmin ? ['right', 'right'] : []), 'left', 'left', 'right'],
     // Profit reads green in the PDF too, same as on screen.
+    // What the search box matches against: who the link was made for, and the card digits.
+    searchText: (r) => [r.payerName, r.cardNumber],
     exportCellColor: (r, header) => (header === 'Profit' ? [56, 161, 105] : null),
+  },
+  // Credit card bill payments (Pay Out > Card Payments). One row per wallet entry: the DEBIT
+  // that paid a bill, and for a failed payment the CREDIT that refunded it. Admins see every
+  // retailer (walletId 0 pools the client); retailers see their own wallet.
+  cardReports: {
+    label: 'Credit Card Reports',
+    description: 'Credit card bill payments over a date range',
+    icon: WalletCards,
+    resolveWalletId: (u) => ((u?.roleName || '').toLowerCase() === 'admin' ? 0 : u?.walletId),
+    statusOptions: ['SUCCESS', 'FAILED', 'PENDING'],
+    fetchUrl: ({ walletId, fromDate, toDate, status }) =>
+      apiUrl(`/api/bbps/report?walletId=${walletId}&fromDate=${fromDate}&toDate=${toDate}${status ? `&status=${status}` : ''}`),
+    headers: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Type', 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Details'],
+    cells: (r) => [
+      r.Id,
+      new Date(r.createdTime).toLocaleString(),
+      ...(isAdmin ? [
+        <div key="retailer">
+          <div style={{ fontWeight: 600 }}>{r.retailerName || '—'}</div>
+          <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.MOBILE_NUMBER || r.username || ''}</div>
+        </div>,
+      ] : []),
+      <span key="type" style={{ fontWeight: 700, color: r.txntype === 'CREDIT' ? '#38A169' : '#E53E3E' }}>
+        {r.txntype === 'CREDIT' ? 'REFUND' : 'PAYMENT'}
+      </span>,
+      <span key="amount" style={{ fontWeight: 700 }}>{money(r.Amount)}</span>,
+      money(r.charges),
+      money(r.closingbalance),
+      r.npciRef || '—',
+      <StatusBadge key="status" status={r.status} />,
+      r.remarks || '—',
+    ],
+    exportRow: (r) => [
+      r.Id, new Date(r.createdTime).toLocaleString(),
+      ...(isAdmin ? [r.retailerName || ''] : []),
+      r.txntype === 'CREDIT' ? 'REFUND' : 'PAYMENT',
+      Number(r.Amount).toFixed(2), Number(r.charges).toFixed(2), Number(r.closingbalance).toFixed(2),
+      r.npciRef || '', r.status, r.remarks || '',
+    ],
+    exportHeaders: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Type', 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Details'],
+    exportWidths: [0.4, 1.3, ...(isAdmin ? [1.1] : []), 0.8, 0.8, 0.7, 1, 1.6, 0.8, 2],
+    exportAligns: ['left', 'left', ...(isAdmin ? ['left'] : []), 'left', 'right', 'right', 'right', 'left', 'left', 'left'],
+    exportCellColor: (r, header) => (header === 'Type' ? (r.txntype === 'CREDIT' ? [56, 161, 105] : [229, 62, 62]) : null),
+    // Search finds a payment by its NPCI reference or, for admins, the retailer.
+    searchText: (r) => [r.npciRef, r.retailerName, r.MOBILE_NUMBER],
+    searchPlaceholder: 'Search NPCI ref or retailer',
   },
   ledger: {
     label: 'Wallet Ledger',
@@ -257,6 +305,7 @@ const buildReports = (isAdmin) => ({
       exportHeaders: ['ID', 'Time', 'PG', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges', 'Partner Charges', 'Profit', 'Status', 'Credited', 'Closing Balance'],
       exportWidths: [0.35, 1.3, 1, 1.1, 1.1, 0.7, 0.85, 0.85, 0.95, 0.8, 0.8, 1.3, 1],
       exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'left', 'left', 'right'],
+      searchText: (r) => [r.payerName, r.cardNumber],
       exportCellColor: (r, header) => (header === 'Profit' ? [56, 161, 105] : null),
     },
   } : {}),
@@ -288,8 +337,18 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [storeDetails, setStoreDetails] = useState(null);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   const report = REPORTS[step];
+
+  // Narrows the rows already loaded — no extra request. Only reports that define
+  // searchText offer it; the table and both exports use the narrowed list, so what you
+  // export is what you are looking at.
+  const needle = query.trim().toLowerCase();
+  const visibleRows = needle && report?.searchText
+    ? rows.filter((r) => report.searchText(r).some((v) => String(v ?? '').toLowerCase().includes(needle)))
+    : rows;
 
   // The login response doesn't carry STORE_ADDRESS, so the full customer record is
   // fetched once for the PDF header (store name, address, contact number).
@@ -308,7 +367,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     setLoading(true);
     setError(null);
     const walletId = report.resolveWalletId ? report.resolveWalletId(user) : user.walletId;
-    fetch(report.fetchUrl({ clientId: MASTER_CLIENT_ID, walletId, fromDate, toDate }))
+    fetch(report.fetchUrl({ clientId: MASTER_CLIENT_ID, walletId, fromDate, toDate, status: statusFilter }))
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();
@@ -316,7 +375,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
       .then(setRows)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [user, fromDate, toDate, report]);
+  }, [user, fromDate, toDate, report, statusFilter]);
 
   useEffect(() => {
     if (report) fetchReport();
@@ -327,6 +386,8 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
 
   const openReport = (key) => {
     setRows([]);
+    setQuery('');
+    setStatusFilter('');
     setError(null);
     setFromDate(todayIso());
     setToDate(todayIso());
@@ -335,7 +396,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
 
   const exportCsv = () => {
     const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const lines = rows.map((r) => report.exportRow(r).map(escape).join(','));
+    const lines = visibleRows.map((r) => report.exportRow(r).map(escape).join(','));
     const csv = [report.exportHeaders.map(escape).join(','), ...lines].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -426,7 +487,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    for (const r of rows) {
+    for (const r of visibleRows) {
       if (y > pageHeight - 50) {
         doc.addPage();
         y = 50;
@@ -535,10 +596,10 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="icon-btn-anim" onClick={exportPdf} disabled={rows.length === 0} style={exportBtnStyle}>
+                <button type="button" className="icon-btn-anim" onClick={exportPdf} disabled={visibleRows.length === 0} style={exportBtnStyle}>
                   <FileText size={14} /> Export PDF
                 </button>
-                <button type="button" className="icon-btn-anim" onClick={exportCsv} disabled={rows.length === 0} style={exportBtnStyle}>
+                <button type="button" className="icon-btn-anim" onClick={exportCsv} disabled={visibleRows.length === 0} style={exportBtnStyle}>
                   <FileSpreadsheet size={14} /> Export Excel
                 </button>
               </div>
@@ -565,9 +626,47 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                   style={{ padding: '8px 12px', fontSize: 13, height: 34 }}
                 />
               </div>
+              {/* Reports whose API filters by status offer it here; applied on Search. */}
+              {report.statusOptions && (
+                <div>
+                  <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
+                    Status
+                  </label>
+                  <select
+                    className="form-input no-icon" value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    style={{ padding: '6px 12px', fontSize: 13, height: 34, minWidth: 130 }}
+                  >
+                    <option value="">All</option>
+                    {report.statusOptions.map((s) => <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>)}
+                  </select>
+                </div>
+              )}
               <button type="button" onClick={fetchReport} className="signin-btn" style={{ width: 'auto', padding: '0 18px', height: 34, fontSize: 13 }}>
                 Search
               </button>
+
+              {/* Filters the rows already on screen, as you type — no request. */}
+              {report.searchText && (
+                <div style={{ position: 'relative', marginLeft: 'auto', flex: '0 1 300px', minWidth: 200 }}>
+                  <Search size={15} color="#8A93A4" style={{ position: 'absolute', left: 12, top: 10, pointerEvents: 'none' }} />
+                  <input
+                    type="text" className="form-input no-icon" value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={report.searchPlaceholder ?? 'Search customer or card number'}
+                    aria-label={report.searchPlaceholder ?? 'Search customer name or card number'}
+                    style={{ padding: '8px 34px 8px 34px', fontSize: 13, height: 34, textAlign: 'left' }}
+                  />
+                  {query && (
+                    <button
+                      type="button" onClick={() => setQuery('')} aria-label="Clear search"
+                      style={{ position: 'absolute', right: 6, top: 5, width: 24, height: 24, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, background: 'none', cursor: 'pointer' }}
+                    >
+                      <X size={14} color="#8A93A4" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {loading && <p style={{ fontFamily: 'Inter, sans-serif', color: '#7C8491' }}>Loading…</p>}
@@ -576,7 +675,19 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
               <p style={{ fontFamily: 'Inter, sans-serif', color: '#7C8491' }}>No entries in this date range.</p>
             )}
 
-            {!loading && !error && rows.length > 0 && (
+            {!loading && !error && rows.length > 0 && visibleRows.length === 0 && (
+              <p style={{ fontFamily: 'Inter, sans-serif', color: '#7C8491' }}>
+                No entries match “{query.trim()}”.
+              </p>
+            )}
+
+            {!loading && !error && needle && visibleRows.length > 0 && (
+              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#7C8491', margin: '0 0 8px', textAlign: 'left' }}>
+                Showing {visibleRows.length} of {rows.length}
+              </p>
+            )}
+
+            {!loading && !error && visibleRows.length > 0 && (
               <div className="table-scroll">
                 <table style={{ width: '100%', minWidth: 640, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
                   <thead>
@@ -595,7 +706,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r, i) => (
+                    {visibleRows.map((r, i) => (
                       // r.id assumes camelCase — some rows (the raw-JSON Qr/* reports
                       // in particular) may not have one at all, which would otherwise
                       // give every row the same undefined key.

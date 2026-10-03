@@ -13,6 +13,9 @@ builder.Services.AddHttpClient("RemoteApi", client =>
 });
 builder.Services.AddScoped<RemoteApiClient>();
 
+// The BBPS service is separate from the clients API; its full URL comes from Bbps:BillersUrl.
+builder.Services.AddHttpClient("Bbps", client => client.Timeout = TimeSpan.FromSeconds(30));
+
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
 builder.Services.AddCors(options =>
 {
