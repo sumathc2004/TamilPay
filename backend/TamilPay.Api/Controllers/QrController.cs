@@ -56,6 +56,7 @@ public class QrController(RemoteApiClient remoteApi) : ControllerBase
             Vpa = request.Vpa,
             Amount = request.Amount,
             UTR = request.Utr,
+            Remarks = string.IsNullOrWhiteSpace(request.Remarks) ? null : request.Remarks.Trim(),
         });
 
         if (!result.IsSuccess)

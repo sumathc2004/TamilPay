@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, LogOut, Plus } from 'lucide-react';
+import { ChevronDown, LogOut, Plus, UserRound } from 'lucide-react';
 import Modal from './Modal';
 import { apiUrl } from '../utils/api';
 import { fieldErrorStyle } from '../styles/formStyles';
@@ -10,7 +10,7 @@ import { fieldErrorStyle } from '../styles/formStyles';
  * notifications backend, so it just tells you there's nothing new instead of faking
  * data), and the profile menu (sign out).
  */
-const TopBar = ({ user, onLogout, currentPage, onWalletChanged, walletVersion }) => {
+const TopBar = ({ user, onLogout, onNavigate, currentPage, onWalletChanged, walletVersion }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
   const roleLetter = isAdmin ? 'A' : 'R';
 
@@ -136,6 +136,22 @@ const TopBar = ({ user, onLogout, currentPage, onWalletChanged, walletVersion })
                 boxShadow: '0 8px 24px rgba(13, 79, 176, 0.12)', overflow: 'hidden', zIndex: 30,
               }}
             >
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onNavigate?.('profile');
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '12px 16px',
+                  background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                  fontWeight: 600, fontSize: 14, color: '#12284A',
+                }}
+              >
+                <UserRound size={16} />
+                Profile
+              </button>
               <button
                 type="button"
                 className="btn-ghost"

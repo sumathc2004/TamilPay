@@ -20,4 +20,8 @@ public class QrRequestInsertRequest
 
     [Required]
     public string Utr { get; set; } = string.Empty;
+
+    /// <summary>Optional free-text note typed by the retailer; shown in the QR report.</summary>
+    [MaxLength(200)]
+    public string? Remarks { get; set; }
 }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using TamilPay.Api.Models;
 using TamilPay.Api.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -131,6 +132,34 @@ public class CustomersController(RemoteApiClient remoteApi) : ControllerBase
             return NotFound();
 
         return Ok(wallet);
+    }
+
+    /// <summary>
+    /// Changes the customer's wallet login password and PIN. The wallet is found from the
+    /// customer id here rather than taken from the browser, and the remote checks the old
+    /// password and PIN itself — a wrong one comes back as its message, not a success.
+    /// </summary>
+    [HttpPost("{id:int}/wallet/credentials")]
+    public async Task<IActionResult> ChangeCredentials(int id, ChangeCredentialsRequest request)
+    {
+        var walletResult = await GetWallet(id);
+        if (walletResult.Result is not OkObjectResult { Value: Wallet wallet })
+            return NotFound(new { message = "No wallet is linked to this account." });
+
+        var result = await remoteApi.PostAsync<JsonElement?>("Wallet/ChangePasswordPin", new
+        {
+            Client_ID = MasterClient.Id, // The one tenant this app serves; never taken from the request.
+            walletId = wallet.WalletId,
+            oldPassword = request.OldPassword,
+            oldPasspin = request.OldPasspin,
+            newPassword = request.NewPassword,
+            newPasspin = request.NewPasspin,
+        });
+
+        if (!result.IsSuccess)
+            return UnprocessableEntity(new { message = string.IsNullOrWhiteSpace(result.Message) ? "The password or PIN could not be changed." : result.Message });
+
+        return Ok(new { message = string.IsNullOrWhiteSpace(result.Message) ? "Updated." : result.Message });
     }
 
     [HttpPut("{id:int}/wallet/payout-charges")]

@@ -98,6 +98,7 @@ const HomePage = ({ onNavigate, user }) => {
   const [selectedVpa, setSelectedVpa] = useState('');
   const [amount, setAmount] = useState('');
   const [utr, setUtr] = useState('');
+  const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -143,6 +144,7 @@ const HomePage = ({ onNavigate, user }) => {
     setSelectedVpa('');
     setAmount('');
     setUtr('');
+    setRemarks('');
     setSubmitError(null);
     setShowQrModal(true);
     requestQr();
@@ -190,6 +192,7 @@ const HomePage = ({ onNavigate, user }) => {
           vpa: selectedVpa,
           amount: amountValue,
           utr: utr.trim(),
+          remarks: remarks.trim(),
         }),
       });
 
@@ -445,6 +448,15 @@ const HomePage = ({ onNavigate, user }) => {
                   type="text" className="form-input no-icon" placeholder="e.g. 123456789012"
                   value={utr}
                   onChange={(e) => setUtr(e.target.value)}
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>Remarks</label>
+                <input
+                  type="text" className="form-input no-icon" placeholder="Optional note" maxLength={200}
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
                 />
               </div>
 

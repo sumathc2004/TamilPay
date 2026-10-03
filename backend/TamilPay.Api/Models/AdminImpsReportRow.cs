@@ -17,6 +17,8 @@ public class AdminImpsReportRow
     public DateTime CreatedTime { get; set; }
     public int WalletId { get; set; }
     public string? CustomerName { get; set; }
+    /// <summary>Not from the remote — filled in from the wallet's owner (see AdminController).</summary>
+    public string? RetailerMobile { get; set; }
     public decimal Amount { get; set; }
     public string? Utr { get; set; }
     public string Status { get; set; } = string.Empty;

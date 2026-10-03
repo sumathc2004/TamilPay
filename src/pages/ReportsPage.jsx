@@ -41,6 +41,39 @@ const exportBtnStyle = {
 
 const money = (v) => `₹${Number(v).toFixed(2)}`;
 
+// Shared by Wallet Ledger and the admin's Admin Ledger Report — same rows, same columns;
+// only whose wallet and how it is chosen differ.
+const ledgerReport = {
+  label: 'Wallet Ledger',
+  description: 'Every debit and credit on your wallet',
+  icon: BookOpen,
+  fetchUrl: ({ walletId, fromDate, toDate }) => apiUrl(`/api/transactions/ledger?walletId=${walletId}&fromDate=${fromDate}&toDate=${toDate}`),
+  headers: ['ID', 'Time', 'Type', 'Details', 'Debit', 'Credit', 'Charges', 'Balance', 'UTR', 'Status'],
+  cells: (r) => [
+    r.id,
+    new Date(r.createdTime).toLocaleString(),
+    <span key="type" style={{ fontWeight: 700, color: r.txnType === 'CREDIT' ? '#38A169' : '#E53E3E' }}>{r.txnType}</span>,
+    r.accountHolderName
+      ? <div key="details">
+          <div style={{ fontWeight: 600 }}>{r.accountHolderName}</div>
+          <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.accountNumber} · {r.ifsc}</div>
+        </div>
+      : (r.remarks || '—'),
+    r.debit > 0 ? money(r.debit) : '—',
+    r.credit > 0 ? money(r.credit) : '—',
+    r.charges > 0 ? money(r.charges) : '—',
+    <span key="balance" style={{ fontWeight: 700 }}>{money(r.balance)}</span>,
+    r.utr || '—',
+    <StatusBadge key="status" status={r.status} />,
+  ],
+  exportRow: (r) => [r.id, new Date(r.createdTime).toLocaleString(), r.txnType, r.accountHolderName || r.remarks, Number(r.debit).toFixed(2), Number(r.credit).toFixed(2), Number(r.charges).toFixed(2), Number(r.balance).toFixed(2), r.utr || '', r.status],
+  exportHeaders: ['ID', 'Time', 'Type', 'Details', 'Debit', 'Credit', 'Charges', 'Balance', 'UTR', 'Status'],
+  exportWidths: [0.35, 1.3, 0.7, 1.5, 0.85, 0.85, 0.8, 0.95, 1.1, 0.75],
+  exportAligns: ['left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'left', 'left'],
+  // Colors the "Type" column in the PDF the same way the on-screen table does.
+  exportCellColor: (r, header) => (header === 'Type' ? (r.txnType === 'CREDIT' ? [56, 161, 105] : [229, 62, 62]) : null),
+};
+
 // Each report is just a data source + how to render one row, both as a table cell
 // (JSX) and as a flat value (for CSV/PDF export) — the surrounding page (date range,
 // search, export buttons, table shell) is identical for every report. fetchUrl takes
@@ -116,7 +149,7 @@ const buildReports = (isAdmin) => ({
       r.id,
       new Date(r.createdTime).toLocaleString(),
       <PgCell key="pg" r={r} />,
-      r.customerName,
+      <RetailerCell key="retailer" name={r.customerName} mobile={r.username} />,
       r.payerName,
       r.cardNumber,
       <span key="amount" style={{ fontWeight: 700 }}>{money(r.amount)}</span>,
@@ -127,7 +160,7 @@ const buildReports = (isAdmin) => ({
       r.walletClosingBalance != null ? money(r.walletClosingBalance) : '—',
     ],
     exportRow: (r) => [
-      r.id, new Date(r.createdTime).toLocaleString(), r.pgName, r.pipeRefNumber || '', r.customerName, r.payerName, r.cardNumber,
+      r.id, new Date(r.createdTime).toLocaleString(), r.pgName, r.pipeRefNumber || '', r.customerName, r.username || '', r.payerName, r.cardNumber,
       Number(r.amount).toFixed(2), Number(r.charges).toFixed(2),
       ...(isAdmin ? [Number(r.partnerCharges).toFixed(2), Number(r.profit).toFixed(2)] : []),
       r.status,
@@ -135,12 +168,12 @@ const buildReports = (isAdmin) => ({
       r.walletClosingBalance != null ? Number(r.walletClosingBalance).toFixed(2) : '',
     ],
     exportHeaders: [
-      'ID', 'Time', 'PG', 'Reference', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges',
+      'ID', 'Time', 'PG', 'Reference', 'Retailer', 'Retailer Mobile', 'Customer', 'Card', 'Amount', 'Charges',
       ...(isAdmin ? ['Partner Charges', 'Profit'] : []),
       'Status', 'Credited', 'Closing Balance',
     ],
-    exportWidths: [0.35, 1.3, 1, 1.5, 1.1, 1.1, 0.7, 0.85, 0.85, ...(isAdmin ? [0.95, 0.8] : []), 0.8, 1.3, 1],
-    exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', ...(isAdmin ? ['right', 'right'] : []), 'left', 'left', 'right'],
+    exportWidths: [0.35, 1.3, 1, 1.5, 1.1, 1, 1.1, 0.7, 0.85, 0.85, ...(isAdmin ? [0.95, 0.8] : []), 0.8, 1.3, 1],
+    exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', ...(isAdmin ? ['right', 'right'] : []), 'left', 'left', 'right'],
     // Profit reads green in the PDF too, same as on screen.
     // What the search box matches against: who the link was made for, and the card digits.
     searchText: (r) => [r.payerName, r.cardNumber, r.pipeRefNumber],
@@ -188,7 +221,6 @@ const buildReports = (isAdmin) => ({
     exportAligns: ['left', 'left', ...(isAdmin ? ['left'] : []), 'right', 'right', 'right', 'left', 'left', 'left', 'left'],
     // Search finds a payment by its NPCI reference or, for admins, the retailer.
     searchText: (r) => [r.npciRef, r.retailerName, r.MOBILE_NUMBER],
-    searchPlaceholder: 'Search NPCI ref or retailer',
     receipt: (r) => ({
       title: r.txntype === 'CREDIT' ? 'Credit Card Payment Refund' : 'Credit Card Payment Receipt',
       status: r.status,
@@ -205,36 +237,7 @@ const buildReports = (isAdmin) => ({
       ],
     }),
   },
-  ledger: {
-    label: 'Wallet Ledger',
-    description: 'Every debit and credit on your wallet',
-    icon: BookOpen,
-    fetchUrl: ({ walletId, fromDate, toDate }) => apiUrl(`/api/transactions/ledger?walletId=${walletId}&fromDate=${fromDate}&toDate=${toDate}`),
-    headers: ['ID', 'Time', 'Type', 'Details', 'Debit', 'Credit', 'Charges', 'Balance', 'UTR', 'Status'],
-    cells: (r) => [
-      r.id,
-      new Date(r.createdTime).toLocaleString(),
-      <span key="type" style={{ fontWeight: 700, color: r.txnType === 'CREDIT' ? '#38A169' : '#E53E3E' }}>{r.txnType}</span>,
-      r.accountHolderName
-        ? <div key="details">
-            <div style={{ fontWeight: 600 }}>{r.accountHolderName}</div>
-            <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.accountNumber} · {r.ifsc}</div>
-          </div>
-        : (r.remarks || '—'),
-      r.debit > 0 ? money(r.debit) : '—',
-      r.credit > 0 ? money(r.credit) : '—',
-      r.charges > 0 ? money(r.charges) : '—',
-      <span key="balance" style={{ fontWeight: 700 }}>{money(r.balance)}</span>,
-      r.utr || '—',
-      <StatusBadge key="status" status={r.status} />,
-    ],
-    exportRow: (r) => [r.id, new Date(r.createdTime).toLocaleString(), r.txnType, r.accountHolderName || r.remarks, Number(r.debit).toFixed(2), Number(r.credit).toFixed(2), Number(r.charges).toFixed(2), Number(r.balance).toFixed(2), r.utr || '', r.status],
-    exportHeaders: ['ID', 'Time', 'Type', 'Details', 'Debit', 'Credit', 'Charges', 'Balance', 'UTR', 'Status'],
-    exportWidths: [0.35, 1.3, 0.7, 1.5, 0.85, 0.85, 0.8, 0.95, 1.1, 0.75],
-    exportAligns: ['left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'left', 'left'],
-    // Colors the "Type" column in the PDF the same way the on-screen table does.
-    exportCellColor: (r, header) => (header === 'Type' ? (r.txnType === 'CREDIT' ? [56, 161, 105] : [229, 62, 62]) : null),
-  },
+  ledger: ledgerReport,
   // Available to every login, same as Transfer/PG Reports — a walletId of 0 pools
   // every wallet on the client together for admins, same trick pg/TransferReport uses.
   qrReports: {
@@ -243,13 +246,15 @@ const buildReports = (isAdmin) => ({
     icon: QrCode,
     resolveWalletId: (u) => ((u?.roleName || '').toLowerCase() === 'admin' ? 0 : u?.walletId),
     fetchUrl: ({ walletId }) => apiUrl(`/api/qr/report?walletId=${walletId}`),
-    headers: ['ID', 'Time', 'VPA', 'Amount', 'UTR', 'Status'],
+    headers: ['ID', 'Time', 'Retailer', 'Store', 'Remarks', 'Amount', 'UTR', 'Status'],
     cells: (r) => {
       const createdTime = pick(r, ['createdTime', 'CreatedTime']);
       return [
         pick(r, ['id', 'Id']) ?? '—',
         createdTime ? new Date(createdTime).toLocaleString() : '—',
-        pick(r, ['vpa', 'Vpa', 'VPA']) ?? '—',
+        <RetailerCell key="retailer" name={pick(r, ['retailerName', 'RetailerName'])} mobile={pick(r, ['username', 'Username'])} />,
+        pick(r, ['QrName', 'qrName']) || '—',
+        pick(r, ['remarks', 'Remarks']) || '—',
         <span key="amount" style={{ fontWeight: 700 }}>{money(pick(r, ['amount', 'Amount']) ?? 0)}</span>,
         pick(r, ['utr', 'Utr', 'UTR']) || '—',
         <StatusBadge key="status" status={pick(r, ['status', 'Status']) ?? ''} />,
@@ -260,19 +265,31 @@ const buildReports = (isAdmin) => ({
       return [
         pick(r, ['id', 'Id']) ?? '',
         createdTime ? new Date(createdTime).toLocaleString() : '',
-        pick(r, ['vpa', 'Vpa', 'VPA']) ?? '',
+        pick(r, ['retailerName', 'RetailerName']) ?? '',
+        pick(r, ['username', 'Username']) ?? '',
+        pick(r, ['QrName', 'qrName']) ?? '',
+        pick(r, ['remarks', 'Remarks']) ?? '',
         Number(pick(r, ['amount', 'Amount']) ?? 0).toFixed(2),
         pick(r, ['utr', 'Utr', 'UTR']) ?? '',
         pick(r, ['status', 'Status']) ?? '',
       ];
     },
-    exportHeaders: ['ID', 'Time', 'VPA', 'Amount', 'UTR', 'Status'],
-    exportWidths: [0.4, 1.3, 1.4, 0.9, 1.1, 0.8],
-    exportAligns: ['left', 'left', 'left', 'right', 'left', 'left'],
+    exportHeaders: ['ID', 'Time', 'Retailer', 'Retailer Mobile', 'Store', 'Remarks', 'Amount', 'UTR', 'Status'],
+    exportWidths: [0.4, 1.3, 1.1, 1, 1.3, 1.5, 0.9, 1, 0.9],
+    exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'right', 'left', 'left'],
   },
   // Admin-only: every retailer's IMPS transfers on the client at once, not just the
   // logged-in admin's own wallet — hence noWalletRequired and no resolveWalletId.
   ...(isAdmin ? {
+    // Admin picks a retailer and reads that wallet's ledger — the same /api/transactions/ledger
+    // the retailer sees for themselves, so figures always agree with the retailer's own view.
+    adminLedger: {
+      ...ledgerReport,
+      label: 'Admin Ledger Report',
+      description: "Any retailer's wallet ledger over a date range",
+      noWalletRequired: true,
+      needsCustomer: true,
+    },
     adminImpsReport: {
       label: 'Admin IMPS Report',
       description: 'Every retailer\'s IMPS transfers, client-wide',
@@ -283,7 +300,10 @@ const buildReports = (isAdmin) => ({
       cells: (r) => [
         r.id,
         new Date(r.createdTime).toLocaleString(),
-        r.customerName || `Wallet #${r.walletId}`,
+        <div key="retailer">
+          <div style={{ fontWeight: 600 }}>{r.customerName || `Wallet #${r.walletId}`}</div>
+          <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.retailerMobile || ''}</div>
+        </div>,
         <div key="account">
           <div style={{ fontWeight: 600 }}>{r.accountHolderName}</div>
           <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.accountNumber} · {r.ifsc}</div>
@@ -293,15 +313,52 @@ const buildReports = (isAdmin) => ({
         <StatusBadge key="status" status={r.status} />,
       ],
       exportRow: (r) => [
-        r.id, new Date(r.createdTime).toLocaleString(), r.customerName || `Wallet #${r.walletId}`,
+        r.id, new Date(r.createdTime).toLocaleString(), r.customerName || `Wallet #${r.walletId}`, r.retailerMobile || '',
         r.accountHolderName, r.accountNumber, r.ifsc, Number(r.amount).toFixed(2), r.utr || '', r.status,
       ],
-      exportHeaders: ['ID', 'Time', 'Retailer', 'Account Holder', 'Account Number', 'IFSC', 'Amount', 'UTR', 'Status'],
-      exportWidths: [0.35, 1.3, 1.1, 1.4, 1.4, 1, 0.9, 1.1, 0.8],
-      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'right', 'left', 'left'],
+      exportHeaders: ['ID', 'Time', 'Retailer', 'Retailer Mobile', 'Account Holder', 'Account Number', 'IFSC', 'Amount', 'UTR', 'Status'],
+      exportWidths: [0.35, 1.3, 1.1, 1, 1.4, 1.4, 1, 0.9, 1.1, 0.8],
+      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'left', 'left'],
     },
     // Every retailer's PG links, client-wide — same shape as the "PG Reports" entry
     // above, just unscoped (retailerName instead of customerName, no walletId at all).
+    // Every retailer's QR collect requests, client-wide (Qr/Request/Report with no wallet) —
+    // the same rows as Admin > QR Requests' "All Requests", with every field the API returns.
+    // That endpoint ignores dates, so clientDateFilter narrows by the chosen range here.
+    adminQrReport: {
+      label: 'Admin QR Report',
+      description: "Every retailer's QR collect requests, client-wide",
+      icon: QrCode,
+      noWalletRequired: true,
+      clientDateFilter: true,
+      fetchUrl: () => apiUrl('/api/qr/admin-report'),
+      headers: ['ID', 'Time', 'Retailer', 'Store', 'VPA', 'Amount', 'Charges', 'Credit Amount', 'UTR', 'Status', 'Approved Time', 'Closing Balance', 'Remarks'],
+      cells: (r) => [
+        r.Id,
+        new Date(r.createdTime).toLocaleString(),
+        <RetailerCell key="retailer" name={r.retailerName} mobile={r.username} />,
+        r.QrName || '—',
+        r.Vpa || '—',
+        <span key="amount" style={{ fontWeight: 700 }}>{money(r.Amount)}</span>,
+        money(r.charges),
+        money(r.creditAmount),
+        r.UTR || '—',
+        <StatusBadge key="status" status={r.status} />,
+        r.approvedTime ? new Date(r.approvedTime).toLocaleString() : '—',
+        r.walletClosingBalance != null ? money(r.walletClosingBalance) : '—',
+        r.remarks || '—',
+      ],
+      exportRow: (r) => [
+        r.Id, new Date(r.createdTime).toLocaleString(), r.retailerName || '', r.username || '', r.QrName || '', r.Vpa || '',
+        Number(r.Amount).toFixed(2), Number(r.charges).toFixed(2), Number(r.creditAmount).toFixed(2), r.UTR || '', r.status,
+        r.approvedTime ? new Date(r.approvedTime).toLocaleString() : '',
+        r.walletClosingBalance != null ? Number(r.walletClosingBalance).toFixed(2) : '',
+        r.remarks || '',
+      ],
+      exportHeaders: ['ID', 'Time', 'Retailer', 'Retailer Mobile', 'Store', 'VPA', 'Amount', 'Charges', 'Credit Amount', 'UTR', 'Status', 'Approved Time', 'Closing Balance', 'Remarks'],
+      exportWidths: [0.35, 1.3, 1, 0.95, 1.1, 1.4, 0.8, 0.7, 0.85, 0.8, 0.8, 1.3, 0.95, 1],
+      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', 'right', 'left', 'left', 'left', 'right', 'left'],
+    },
     adminPgReport: {
       label: 'Admin PG Report',
       description: 'Every retailer\'s PG links, client-wide',
@@ -313,7 +370,7 @@ const buildReports = (isAdmin) => ({
         r.id,
         new Date(r.createdTime).toLocaleString(),
         <PgCell key="pg" r={r} />,
-        r.retailerName,
+        <RetailerCell key="retailer" name={r.retailerName} mobile={r.username} />,
         r.payerName,
         r.cardNumber,
         <span key="amount" style={{ fontWeight: 700 }}>{money(r.amount)}</span>,
@@ -325,14 +382,14 @@ const buildReports = (isAdmin) => ({
         r.walletClosingBalance != null ? money(r.walletClosingBalance) : '—',
       ],
       exportRow: (r) => [
-        r.id, new Date(r.createdTime).toLocaleString(), r.pgName, r.pipeRefNumber || '', r.retailerName, r.payerName, r.cardNumber,
+        r.id, new Date(r.createdTime).toLocaleString(), r.pgName, r.pipeRefNumber || '', r.retailerName, r.username || '', r.payerName, r.cardNumber,
         Number(r.amount).toFixed(2), Number(r.charges).toFixed(2), Number(r.partnerCharges).toFixed(2), Number(r.profit).toFixed(2), r.status,
         r.walletCreditedTime ? new Date(r.walletCreditedTime).toLocaleString() : '',
         r.walletClosingBalance != null ? Number(r.walletClosingBalance).toFixed(2) : '',
       ],
-      exportHeaders: ['ID', 'Time', 'PG', 'Reference', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges', 'Partner Charges', 'Profit', 'Status', 'Credited', 'Closing Balance'],
-      exportWidths: [0.35, 1.3, 1, 1.5, 1.1, 1.1, 0.7, 0.85, 0.85, 0.95, 0.8, 0.8, 1.3, 1],
-      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'left', 'left', 'right'],
+      exportHeaders: ['ID', 'Time', 'PG', 'Reference', 'Retailer', 'Retailer Mobile', 'Customer', 'Card', 'Amount', 'Charges', 'Partner Charges', 'Profit', 'Status', 'Credited', 'Closing Balance'],
+      exportWidths: [0.35, 1.3, 1, 1.5, 1.1, 1, 1.1, 0.7, 0.85, 0.85, 0.95, 0.8, 0.8, 1.3, 1],
+      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'left', 'left', 'right'],
       searchText: (r) => [r.payerName, r.cardNumber, r.pipeRefNumber],
       exportCellColor: (r, header) => (header === 'Profit' ? [56, 161, 105] : null),
     },
@@ -348,17 +405,28 @@ const PgCell = ({ r }) => (
   </div>
 );
 
-const StatusBadge = ({ status }) => (
-  <span
-    style={{
-      display: 'inline-block', padding: '3px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-      background: status === 'SUCCESS' ? '#E0F7EA' : status === 'PENDING' ? '#FFF5EB' : '#FFF5F5',
-      color: status === 'SUCCESS' ? '#38A169' : status === 'PENDING' ? '#F26A1B' : '#E53E3E',
-    }}
-  >
-    {status}
-  </span>
+// Retailer name with their mobile number (the login id) underneath.
+const RetailerCell = ({ name, mobile }) => (
+  <div>
+    <div style={{ fontWeight: 600 }}>{name || '—'}</div>
+    <div style={{ color: '#9CA3AF', fontSize: 12 }}>{mobile || ''}</div>
+  </div>
 );
+
+const StatusBadge = ({ status }) => {
+  const good = status === 'SUCCESS' || status === 'APPROVED';
+  return (
+    <span
+      style={{
+        display: 'inline-block', padding: '3px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+        background: good ? '#E0F7EA' : status === 'PENDING' ? '#FFF5EB' : '#FFF5F5',
+        color: good ? '#38A169' : status === 'PENDING' ? '#F26A1B' : '#E53E3E',
+      }}
+    >
+      {status}
+    </span>
+  );
+};
 
 /** Reports menu ('menu' step), each report keyed by buildReports() above, sharing one date-ranged view with PDF/CSV export. */
 const ReportsPage = ({ onNavigate, user, navParams }) => {
@@ -376,15 +444,21 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
   const [storeDetails, setStoreDetails] = useState(null);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  // Reports with needsCustomer (Admin Ledger) read one retailer's wallet, picked from this list.
+  const [customers, setCustomers] = useState([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customerWalletId, setCustomerWalletId] = useState('');
 
   const report = REPORTS[step];
 
-  // Narrows the rows already loaded — no extra request. Only reports that define
-  // searchText offer it; the table and both exports use the narrowed list, so what you
-  // export is what you are looking at.
+  // Narrows the rows already loaded — no extra request, every report offers it. A row
+  // matches when the text is in any of its columns (what the exports carry, formatted as
+  // shown) or in a report's extra searchable fields; the table and both exports use the
+  // narrowed list, so what you export is what you are looking at.
   const needle = query.trim().toLowerCase();
-  const visibleRows = needle && report?.searchText
-    ? rows.filter((r) => report.searchText(r).some((v) => String(v ?? '').toLowerCase().includes(needle)))
+  const visibleRows = needle && report
+    ? rows.filter((r) => [...report.exportRow(r), ...(report.searchText?.(r) ?? [])]
+      .some((v) => String(v ?? '').toLowerCase().includes(needle)))
     : rows;
 
   // The login response doesn't carry STORE_ADDRESS, so the full customer record is
@@ -401,18 +475,25 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     // Admin IMPS Report is client-wide, not scoped to the logged-in admin's own
     // wallet — the only report that doesn't need a walletId to make sense at all.
     if (!report || (!report.noWalletRequired && !user?.walletId)) return;
+    if (report.needsCustomer && !customerWalletId) return;
     setLoading(true);
     setError(null);
-    const walletId = report.resolveWalletId ? report.resolveWalletId(user) : user.walletId;
+    const walletId = report.needsCustomer ? customerWalletId : report.resolveWalletId ? report.resolveWalletId(user) : user.walletId;
     fetch(report.fetchUrl({ clientId: MASTER_CLIENT_ID, walletId, fromDate, toDate, status: statusFilter }))
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();
       })
-      .then(setRows)
+      .then((data) => {
+        if (!report.clientDateFilter) return setRows(data);
+        // Whole days, local time: from 00:00 of the first day to just before the day after the last.
+        const start = new Date(`${fromDate}T00:00:00`).getTime();
+        const end = new Date(`${toDate}T00:00:00`).getTime() + 86400000;
+        setRows(data.filter((r) => { const t = new Date(r.createdTime).getTime(); return t >= start && t < end; }));
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [user, fromDate, toDate, report, statusFilter]);
+  }, [user, fromDate, toDate, report, statusFilter, customerWalletId]);
 
   useEffect(() => {
     if (report) fetchReport();
@@ -421,7 +502,18 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
+  useEffect(() => {
+    if (!report?.needsCustomer) return;
+    setCustomersLoading(true);
+    fetch(apiUrl(`/api/customers/retailers?clientId=${MASTER_CLIENT_ID}`))
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list) => setCustomers([...list].sort((a, b) => String(a.fullName).localeCompare(String(b.fullName)))))
+      .catch(() => setCustomers([]))
+      .finally(() => setCustomersLoading(false));
+  }, [report]);
+
   const openReport = (key) => {
+    setCustomerWalletId('');
     setRows([]);
     setQuery('');
     setStatusFilter('');
@@ -670,44 +762,30 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
         </button>
 
         {step === 'menu' && (
-          <div style={{ ...cardStyle, maxWidth: 480 }}>
-            <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 20, color: 'var(--theme-heading)', margin: '0 0 20px' }}>
+          <div>
+            <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 'clamp(20px, 3vw, 26px)', color: 'var(--theme-heading)', margin: '0 0 4px' }}>
               Reports
             </h1>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#7C8491', margin: '0 0 18px' }}>
+              Pick a report, then choose a date range.
+            </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {Object.entries(REPORTS).map(([key, r]) => (
+            {/* Even grid of tiles that reflows with the screen width (see .rp-grid in index.css). */}
+            <div className="rp-grid">
+              {Object.entries(REPORTS).map(([key, r], i) => (
                 <button
                   key={key}
                   type="button"
-                  className="list-row-btn"
+                  className={`rp-tile rp-tone-${i % 4}`}
+                  style={{ '--i': i }}
                   onClick={() => openReport(key)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                    background: '#F3F7FD', border: '1px solid rgba(var(--theme-heading-rgb),0.08)', borderRadius: 14,
-                    padding: '16px 18px', cursor: 'pointer', textAlign: 'left',
-                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div
-                      className="icon-badge-shine"
-                      style={{
-                        width: 40, height: 40, borderRadius: 12, background: 'var(--theme-tint)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      }}
-                    >
-                      <r.icon size={18} color="var(--theme-accent)" />
-                    </div>
-                    <div>
-                      <p style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14.5, color: 'var(--theme-heading)', margin: 0 }}>
-                        {r.label}
-                      </p>
-                      <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12.5, color: '#7C8491', margin: '2px 0 0' }}>
-                        {r.description}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight size={18} color="#B0B8C4" />
+                  <span className="rp-tile-icon"><r.icon size={22} strokeWidth={2} /></span>
+                  <span className="rp-tile-text">
+                    <span className="rp-tile-title">{r.label}</span>
+                    <span className="rp-tile-desc">{r.description}</span>
+                  </span>
+                  <ChevronRight className="rp-tile-arrow" size={18} />
                 </button>
               ))}
             </div>
@@ -744,6 +822,25 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+              {report.needsCustomer && (
+                <div>
+                  <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
+                    Select Customer
+                  </label>
+                  <select
+                    className="form-input no-icon" value={customerWalletId}
+                    onChange={(e) => { setCustomerWalletId(e.target.value); setRows([]); }}
+                    style={{ padding: '6px 12px', fontSize: 13, height: 34, minWidth: 220 }}
+                  >
+                    <option value="">{customersLoading ? 'Loading customers…' : 'Select customer'}</option>
+                    {customers.map((c) => (
+                      <option key={c.walletId} value={c.walletId}>
+                        {c.fullName}{c.storeName ? ` — ${c.storeName}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
                   From
@@ -785,32 +882,32 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
               </button>
 
               {/* Filters the rows already on screen, as you type — no request. */}
-              {report.searchText && (
-                <div style={{ position: 'relative', marginLeft: 'auto', flex: '0 1 300px', minWidth: 200 }}>
-                  <Search size={15} color="#8A93A4" style={{ position: 'absolute', left: 12, top: 10, pointerEvents: 'none' }} />
-                  <input
-                    type="text" className="form-input no-icon" value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder={report.searchPlaceholder ?? 'Search customer or card number'}
-                    aria-label={report.searchPlaceholder ?? 'Search customer name or card number'}
-                    style={{ padding: '8px 34px 8px 34px', fontSize: 13, height: 34, textAlign: 'left' }}
-                  />
-                  {query && (
-                    <button
-                      type="button" onClick={() => setQuery('')} aria-label="Clear search"
-                      style={{ position: 'absolute', right: 6, top: 5, width: 24, height: 24, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, background: 'none', cursor: 'pointer' }}
-                    >
-                      <X size={14} color="#8A93A4" />
-                    </button>
-                  )}
+              <div style={{ position: 'relative', marginLeft: 'auto', flex: '0 1 300px', minWidth: 200 }}>
+                <Search size={15} color="#8A93A4" style={{ position: 'absolute', left: 12, top: 10, pointerEvents: 'none' }} />
+                <input
+                  type="text" className="form-input no-icon" value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search any column"
+                  aria-label="Search any column"
+                  style={{ padding: '8px 34px 8px 34px', fontSize: 13, height: 34, textAlign: 'left' }}
+                />
+                {query && (
+                  <button
+                    type="button" onClick={() => setQuery('')} aria-label="Clear search"
+                    style={{ position: 'absolute', right: 6, top: 5, width: 24, height: 24, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, background: 'none', cursor: 'pointer' }}
+                  >
+                    <X size={14} color="#8A93A4" />
+                  </button>
+                )}
                 </div>
-              )}
             </div>
 
             {loading && <p style={{ fontFamily: 'Inter, sans-serif', color: '#7C8491' }}>Loading…</p>}
             {!loading && error && <p style={{ fontFamily: 'Inter, sans-serif', color: '#E53E3E' }}>Couldn't load report: {error}</p>}
             {!loading && !error && rows.length === 0 && (
-              <p style={{ fontFamily: 'Inter, sans-serif', color: '#7C8491' }}>No entries in this date range.</p>
+              <p style={{ fontFamily: 'Inter, sans-serif', color: '#7C8491' }}>
+                {report.needsCustomer && !customerWalletId ? 'Select a customer to view their ledger.' : 'No entries in this date range.'}
+              </p>
             )}
 
             {!loading && !error && rows.length > 0 && visibleRows.length === 0 && (

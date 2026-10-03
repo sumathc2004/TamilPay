@@ -3187,3 +3187,137 @@ body {
 .ccr-ref { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px !important; word-break: break-all; }
 .ccr-note { margin: 12px 0 0; font-size: 12.5px; color: #8A93A4; text-align: center; }
 .ccr-actions { margin-top: 16px; }
+
+
+/* ===================== REPORTS MENU — TILE GRID ===================== */
+/* Equal tiles that reflow by available width: as many 250px+ columns as fit. */
+.rp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 18px;
+}
+.rp-tile {
+  --rp-bg: #EAF1FE; --rp-fg: #1565D8;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 26px;
+  min-width: 0;
+  min-height: 168px;
+  padding: 22px;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(160deg, rgba(255,255,255,0.98) 0%, var(--rp-bg) 190%);
+  border: 1px solid rgba(var(--theme-heading-rgb), 0.07);
+  border-radius: 22px;
+  box-shadow: 0 1px 2px rgba(var(--theme-heading-rgb), 0.04), 0 6px 20px rgba(var(--theme-heading-rgb), 0.06);
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  /* Staggered entrance: each tile rises in a beat after the one before it. */
+  opacity: 0;
+  animation: rp-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 55ms);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+}
+/* A soft sheen that sweeps across on hover. */
+.rp-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.75) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* A tinted glow in the corner that blooms on hover. */
+.rp-tile::after {
+  content: '';
+  position: absolute;
+  right: -40px; bottom: -40px;
+  width: 140px; height: 140px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--rp-bg) 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rp-tile:hover {
+  transform: translateY(-5px);
+  border-color: color-mix(in srgb, var(--rp-fg) 45%, transparent);
+  box-shadow: 0 2px 4px rgba(var(--theme-heading-rgb), 0.04), 0 18px 38px rgba(var(--theme-heading-rgb), 0.15);
+}
+.rp-tile:hover::before { transform: translateX(120%); }
+.rp-tile:hover::after { opacity: 1; transform: scale(1); }
+.rp-tile:active { transform: translateY(-1px) scale(0.985); transition-duration: 0.1s; }
+.rp-tile:focus-visible { outline: 3px solid var(--rp-fg); outline-offset: 3px; }
+
+.rp-tone-0 { --rp-bg: #DCE9FD; --rp-fg: #1565D8; }
+.rp-tone-1 { --rp-bg: #FFE6D6; --rp-fg: #E8590C; }
+.rp-tone-2 { --rp-bg: #FCEFC9; --rp-fg: #B7791F; }
+.rp-tone-3 { --rp-bg: #D9F2F7; --rp-fg: #0E7C93; }
+
+.rp-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 48px; height: 48px;
+  border-radius: 15px;
+  background: var(--rp-bg);
+  color: var(--rp-fg);
+  flex: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rp-fg) 12%, transparent);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+.rp-tile:hover .rp-tile-icon {
+  transform: translateY(-2px) rotate(-6deg) scale(1.1);
+  background: var(--rp-fg);
+  color: #fff;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--rp-fg) 38%, transparent);
+}
+.rp-tile-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rp-tile-title { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; color: var(--theme-heading); overflow-wrap: anywhere; }
+.rp-tile-desc { font-size: 13px; line-height: 1.45; color: #7C8491; }
+
+/* The arrow sits in a small chip that fills with the tile's colour on hover. */
+.rp-tile-arrow {
+  position: absolute; top: 20px; right: 20px;
+  box-sizing: content-box;
+  padding: 6px;
+  border-radius: 50%;
+  color: #B0B8C4;
+  opacity: 0.8;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), background 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+}
+.rp-tile:hover .rp-tile-arrow { transform: translateX(3px); background: var(--rp-bg); color: var(--rp-fg); opacity: 1; }
+
+@keyframes rp-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (max-width: 520px) {
+  .rp-grid { grid-template-columns: 1fr; gap: 12px; }
+  .rp-tile { min-height: 0; flex-direction: row; justify-content: flex-start; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; }
+  .rp-tile-icon { width: 44px; height: 44px; border-radius: 13px; }
+  .rp-tile-text { padding-right: 34px; }
+  .rp-tile-arrow { top: 50%; right: 14px; margin-top: -15px; }
+}
+
+/* Motion is decoration here — anyone who asks the OS for less of it gets static tiles. */
+@media (prefers-reduced-motion: reduce) {
+  .rp-tile { animation: none; opacity: 1; transition: box-shadow 0.2s ease, border-color 0.2s ease; }
+  .rp-tile::before, .rp-tile::after { display: none; }
+  .rp-tile:hover, .rp-tile:active { transform: none; }
+  .rp-tile:hover .rp-tile-icon, .rp-tile:hover .rp-tile-arrow { transform: none; }
+}
+
+/* Profile: a form box that appears when its button is clicked. */
+.rp-reveal { animation: rp-reveal 0.28s cubic-bezier(0.22, 1, 0.36, 1); transform-origin: top; }
+@keyframes rp-reveal {
+  from { opacity: 0; transform: translateY(-8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .rp-reveal { animation: none; } }

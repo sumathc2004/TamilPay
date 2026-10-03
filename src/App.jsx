@@ -17,6 +17,7 @@ import WalletSettlementPage from './pages/WalletSettlementPage';
 import QrCodesPage from './pages/QrCodesPage';
 import QrRequestsPage from './pages/QrRequestsPage';
 import CardPaymentsPage from './pages/CardPaymentsPage';
+import ProfilePage from './pages/ProfilePage';
 import PgStatusPage from './pages/PgStatusPage';
 import { fromPath, toPath } from './utils/router';
 import { apiUrl } from './utils/api';
@@ -37,6 +38,7 @@ const PAGES = {
   qrCodes: QrCodesPage,
   qrRequests: QrRequestsPage,
   cardPayments: CardPaymentsPage,
+  profile: ProfilePage,
 };
 
 const SESSION_KEY = 'tamilpay_user';
@@ -252,6 +254,7 @@ function App() {
         <TopBar
           user={user}
           onLogout={handleLogout}
+          onNavigate={navigate}
           currentPage={currentPage}
           onWalletChanged={bumpWalletVersion}
           walletVersion={walletVersion}

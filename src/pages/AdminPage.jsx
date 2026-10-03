@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import PaymentCard from '../components/PaymentCard';
+import { ArrowLeft, ArrowLeftRight, ChevronRight, ClipboardList, CreditCard, LayoutDashboard, QrCode, SlidersHorizontal, Users } from 'lucide-react';
 import { apiUrl } from '../utils/api';
 
 // Landing spot for admin-only tools. Customers navigates to its own page as
 // before; Dashboard stays right here and renders its summary alongside the
 // tiles instead of navigating away.
+// Same tile style as the Reports menu (.rp-grid / .rp-tile in index.css).
 const AdminPage = ({ onNavigate, walletVersion }) => {
   const [showDashboard, setShowDashboard] = useState(false);
   const [dashboard, setDashboard] = useState(null);
@@ -51,21 +51,32 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
           Admin
         </h1>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 40 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 28 }}>
           {/* Tiles */}
-          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-            <PaymentCard type="customers" onClick={() => onNavigate?.('customers')} />
-            <PaymentCard type="dashboard" onClick={() => setShowDashboard(true)} />
-            <PaymentCard type="pgSettings" onClick={() => onNavigate?.('pgsettings')} />
-            <PaymentCard type="impsReport" onClick={() => onNavigate?.('reports', { report: 'adminImpsReport' })} />
-            <PaymentCard type="pgReport" onClick={() => onNavigate?.('reports', { report: 'adminPgReport' })} />
-            <PaymentCard type="qr" onClick={() => onNavigate?.('qrCodes')} />
-            <PaymentCard type="qrRequests" onClick={() => onNavigate?.('qrRequests')} />
+          <div className="rp-grid" style={{ flex: '1 1 520px', minWidth: 0 }}>
+            {[
+              ['Customers', 'Add and manage retailers and their wallets', Users, () => onNavigate?.('customers')],
+              ['Dashboard', 'Wallet and payment pipe balances at a glance', LayoutDashboard, () => setShowDashboard(true)],
+              ['PG Settings', 'Payment gateway charges and settlement', SlidersHorizontal, () => onNavigate?.('pgsettings')],
+              ['IMPS Report', "Every retailer's IMPS transfers", ArrowLeftRight, () => onNavigate?.('reports', { report: 'adminImpsReport' })],
+              ['PG Report', "Every retailer's payment gateway links", CreditCard, () => onNavigate?.('reports', { report: 'adminPgReport' })],
+              ['QR', 'Create and manage static QR codes', QrCode, () => onNavigate?.('qrCodes')],
+              ['QR Requests', 'Approve or reject collect requests', ClipboardList, () => onNavigate?.('qrRequests')],
+            ].map(([label, description, Icon, onClick], i) => (
+              <button key={label} type="button" className={`rp-tile rp-tone-${i % 4}`} style={{ '--i': i }} onClick={onClick}>
+                <span className="rp-tile-icon"><Icon size={22} strokeWidth={2} /></span>
+                <span className="rp-tile-text">
+                  <span className="rp-tile-title">{label}</span>
+                  <span className="rp-tile-desc">{description}</span>
+                </span>
+                <ChevronRight className="rp-tile-arrow" size={18} />
+              </button>
+            ))}
           </div>
 
           {/* Dashboard summary — appears on the far right once the Dashboard tile is clicked */}
           {showDashboard && (
-            <div style={{ flex: '1 1 320px', maxWidth: 480 }}>
+            <div style={{ flex: '1 1 320px', maxWidth: 480, minWidth: 0 }}>
               <h2 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 18, color: 'var(--theme-heading)', margin: '0 0 16px' }}>
                 Dashboard
               </h2>

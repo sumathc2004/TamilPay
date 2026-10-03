@@ -154,8 +154,12 @@ const CustomerDetailPage = ({ onNavigate, navParams }) => {
     return match ? `${match.clientName} — ${match.firmName ?? match.clientCity}` : `#${id}`;
   };
 
+  // PAN and GSTIN are always capitals — stored that way as you type, not just displayed that
+  // way, because the format check below (and the server's) only accepts capital letters.
+  const UPPERCASE_FIELDS = ['pan', 'gst'];
   const updateField = (name) => (e) => {
-    setForm((f) => ({ ...f, [name]: e.target.value }));
+    const value = UPPERCASE_FIELDS.includes(name) ? e.target.value.toUpperCase() : e.target.value;
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
   const updateMobile = (e) => {
@@ -167,12 +171,12 @@ const CustomerDetailPage = ({ onNavigate, navParams }) => {
   const validate = () => {
     const errors = {};
     if (!form.fullName.trim()) errors.fullName = 'Full name is required.';
-    if (!PAN_PATTERN.test(form.pan)) errors.pan = 'Enter a valid PAN, e.g. AAAAA0000A.';
+    if (!PAN_PATTERN.test(form.pan.trim().toUpperCase())) errors.pan = 'Enter a valid PAN, e.g. AAAAA0000A.';
     if (!AADHAAR_PATTERN.test(form.aadhaar)) errors.aadhaar = 'Aadhaar must be exactly 12 digits.';
     if (!form.dateOfBirth) errors.dateOfBirth = 'Date of birth is required.';
     if (!INDIAN_MOBILE_PATTERN.test(form.mobileNumber)) errors.mobileNumber = 'Enter a valid 10-digit Indian mobile number.';
     if (!form.emailId.trim()) errors.emailId = 'Email is required.';
-    if (form.gst.trim() && !GSTIN_PATTERN.test(form.gst.trim())) errors.gst = 'Enter a valid 15-character GSTIN.';
+    if (form.gst.trim() && !GSTIN_PATTERN.test(form.gst.trim().toUpperCase())) errors.gst = 'Enter a valid 15-character GSTIN.';
     if (!form.residentialAddress.trim()) errors.residentialAddress = 'Residential address is required.';
     if (!form.storeName.trim()) errors.storeName = 'Store name is required.';
     if (!form.storeAddress.trim()) errors.storeAddress = 'Store address is required.';
