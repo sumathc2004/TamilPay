@@ -2289,11 +2289,16 @@ body {
   .app-topbar-wallet-amount { font-size: 13px; }
   .app-topbar-avatar { width: 32px; height: 32px; }
 }
-/* Narrower still: the wallet figure is the one thing that can go, since the
-   same number is on the dashboard. */
+/* Narrower still: the wallet balance stays — it is the figure people check most — so
+   the rest tightens around it instead. */
 @media (max-width: 380px) {
-  .app-topbar-wallet { display: none; }
-  .app-brandbar-logo img { height: 34px !important; }
+  .app-brandbar { gap: 6px; padding: 6px 10px; }
+  .app-brandbar-logo img { height: 30px !important; }
+  .app-topbar-right { gap: 6px; }
+  .app-topbar-wallet-amount { font-size: 12.5px; white-space: nowrap; }
+  .app-topbar-addcredit { padding: 7px 8px; }
+  .app-topbar-avatar { width: 30px; height: 30px; }
+  .app-topbar-profile { padding-left: 2px; padding-right: 2px; gap: 2px; }
 }
 
 /* =====================================================================

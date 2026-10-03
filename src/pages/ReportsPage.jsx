@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, QrCode, Receipt, Search, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, WalletCards, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { apiUrl } from '../utils/api';
 import { loadImageAsDataUrl } from '../utils/pdf';
@@ -75,6 +75,21 @@ const buildReports = (isAdmin) => ({
     // other since fields like the full date/time string are much wider than "ID".
     exportWidths: [0.4, 1.3, 1.5, 1.4, 1, 0.9, 1.1, 0.8],
     exportAligns: ['left', 'left', 'left', 'left', 'left', 'right', 'left', 'left'],
+    // Per-row Print / Download / Share receipt (see ReportsPage).
+    receipt: (r) => ({
+      title: 'Transfer Receipt',
+      status: r.status,
+      rows: [
+        ['Transaction ID', r.id],
+        ['Date & Time', new Date(r.createdTime).toLocaleString()],
+        ['Account Holder', r.accountHolderName],
+        ['Account Number', r.accountNumber],
+        ['IFSC', r.ifsc],
+        ['Amount', money(r.amount)],
+        ['UTR', r.utr || '—'],
+        ['Status', r.status],
+      ],
+    }),
   },
   // Available to every login (Retailer and Admin) — same wallet-scoped call either way.
   // Confirmed directly that a walletId of 0 (which an admin-role wallet can have) makes
@@ -157,7 +172,7 @@ const buildReports = (isAdmin) => ({
       money(r.closingbalance),
       r.npciRef || '—',
       <StatusBadge key="status" status={r.status} />,
-      pick(r, ['customerName', 'CustomerName', 'consumerName']) || '—',
+      pick(r, ['ConsumerName', 'consumerName', 'customerName', 'CustomerName']) || '—',
       pick(r, ['cardNumber', 'CardNumber', 'card_number']) || '—',
     ],
     exportRow: (r) => [
@@ -165,7 +180,7 @@ const buildReports = (isAdmin) => ({
       ...(isAdmin ? [r.retailerName || ''] : []),
       Number(r.Amount).toFixed(2), Number(r.charges).toFixed(2), Number(r.closingbalance).toFixed(2),
       r.npciRef || '', r.status,
-      pick(r, ['customerName', 'CustomerName', 'consumerName']) || '',
+      pick(r, ['ConsumerName', 'consumerName', 'customerName', 'CustomerName']) || '',
       pick(r, ['cardNumber', 'CardNumber', 'card_number']) || '',
     ],
     exportHeaders: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Consumer Name', 'Card Number'],
@@ -174,6 +189,21 @@ const buildReports = (isAdmin) => ({
     // Search finds a payment by its NPCI reference or, for admins, the retailer.
     searchText: (r) => [r.npciRef, r.retailerName, r.MOBILE_NUMBER],
     searchPlaceholder: 'Search NPCI ref or retailer',
+    receipt: (r) => ({
+      title: r.txntype === 'CREDIT' ? 'Credit Card Payment Refund' : 'Credit Card Payment Receipt',
+      status: r.status,
+      rows: [
+        ['Transaction ID', r.Id],
+        ['Date & Time', new Date(r.createdTime).toLocaleString()],
+        ...(r.retailerName ? [['Retailer', r.retailerName]] : []),
+        ['Consumer Name', pick(r, ['ConsumerName', 'consumerName', 'customerName', 'CustomerName']) || '—'],
+        ['Card Number', pick(r, ['cardNumber', 'CardNumber', 'card_number']) || '—'],
+        ['Amount', money(r.Amount)],
+        ['Charges', money(r.charges)],
+        ['NPCI Ref', r.npciRef || '—'],
+        ['Status', r.status],
+      ],
+    }),
   },
   ledger: {
     label: 'Wallet Ledger',
@@ -515,6 +545,99 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     doc.save(`${step}-report-${fromDate}-to-${toDate}.pdf`);
   };
 
+  // One-page receipt for a single row: store letterhead, title, key/value lines. Print,
+  // Download and Share all start from the same document.
+  const buildReceipt = async (r) => {
+    const { title, rows: lines, status } = report.receipt(r);
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const left = 50;
+    const right = doc.internal.pageSize.getWidth() - 50;
+    let y = 60;
+
+    const logoDataUrl = await loadImageAsDataUrl(tamilPayLogo);
+    const textLeft = logoDataUrl ? left + 72 : left;
+    if (logoDataUrl) {
+      const { width: w, height: h } = doc.getImageProperties(logoDataUrl);
+      const scale = Math.min(64 / w, 24 / h);
+      doc.addImage(logoDataUrl, 'PNG', left, y - 18, w * scale, h * scale);
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(16, 42, 80);
+    doc.text(storeDetails?.STORE_NAME ?? user?.STORE_NAME ?? '', textLeft, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(124, 132, 145);
+    doc.text(storeDetails?.STORE_ADDRESS ?? '', textLeft, y + 14);
+    doc.text(storeDetails?.MOBILE_NUMBER ?? user?.MOBILE_NUMBER ?? '', textLeft, y + 26);
+    y += 46;
+    doc.setDrawColor(220, 224, 232);
+    doc.line(left, y, right, y);
+    y += 36;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(16, 42, 80);
+    doc.text(title, left, y);
+    y += 24;
+    doc.setFontSize(11);
+    doc.setTextColor(...(status === 'SUCCESS' ? [56, 161, 105] : status === 'PENDING' ? [242, 106, 27] : [229, 62, 62]));
+    doc.text(String(status), left, y);
+    y += 28;
+
+    lines.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(124, 132, 145);
+      doc.text(label, left, y);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(16, 42, 80);
+      doc.text(String(value ?? '—'), right, y, { align: 'right' });
+      y += 10;
+      doc.setDrawColor(236, 239, 244);
+      doc.line(left, y, right, y);
+      y += 20;
+    });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(156, 163, 175);
+    doc.text(`Generated on ${new Date().toLocaleString()}`, left, y + 14);
+    return { doc, title, fileName: `${step}-receipt-${lines[0][1]}.pdf` };
+  };
+
+  const printReceipt = async (r) => {
+    const { doc } = await buildReceipt(r);
+    doc.autoPrint();
+    const win = window.open(doc.output('bloburl'), '_blank');
+    if (!win) window.alert('Allow pop-ups for this site to print the receipt.');
+  };
+
+  const downloadReceipt = async (r) => {
+    const { doc, fileName } = await buildReceipt(r);
+    doc.save(fileName);
+  };
+
+  // Shares the PDF itself where the browser/OS allows file sharing (phones, some desktops);
+  // otherwise shares the receipt as text, and as a last resort copies that text.
+  const shareReceipt = async (r) => {
+    const { doc, title, fileName } = await buildReceipt(r);
+    const text = [title, ...report.receipt(r).rows.map(([k, v]) => `${k}: ${v ?? '—'}`)].join('\n');
+    try {
+      const file = new File([doc.output('blob')], fileName, { type: 'application/pdf' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title, text });
+      } else if (navigator.share) {
+        await navigator.share({ title, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        window.alert("Sharing isn't supported in this browser — the receipt details were copied to the clipboard.");
+      }
+    } catch (err) {
+      // Cancelling the share sheet is not an error worth reporting.
+      if (err?.name !== 'AbortError') window.alert(`Couldn't share the receipt: ${err.message}`);
+    }
+  };
+
   return (
     // An open report fills the whole content area (the table takes the leftover height and
     // scrolls inside it); the menu is short and just sizes to its tiles.
@@ -719,6 +842,17 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                           {h}
                         </th>
                       ))}
+                      {report.receipt && (
+                        <th
+                          style={{
+                            position: 'sticky', top: 0, zIndex: 1, background: '#F3F7FD',
+                            padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase',
+                            color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Actions
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -732,6 +866,23 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                             {cell}
                           </td>
                         ))}
+                        {report.receipt && (
+                          <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
+                            {[
+                              ['Print receipt', Printer, printReceipt],
+                              ['Download receipt', Download, downloadReceipt],
+                              ['Share receipt', Share2, shareReceipt],
+                            ].map(([label, Icon, action]) => (
+                              <button
+                                key={label} type="button" title={label} aria-label={label}
+                                className="icon-btn-anim" onClick={() => action(r)}
+                                style={{ background: '#F3F7FD', border: '1px solid rgba(var(--theme-heading-rgb),0.1)', borderRadius: 8, cursor: 'pointer', padding: 6, marginRight: 6, lineHeight: 0 }}
+                              >
+                                <Icon size={14} color="var(--theme-heading)" />
+                              </button>
+                            ))}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
