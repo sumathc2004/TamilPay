@@ -24,7 +24,6 @@ const LoginPage = ({ onLogin }) => {
   const [showPw,   setShowPw]   = useState(false);
   const [loginId,  setLoginId]  = useState('');
   const [password, setPassword] = useState('');
-  const [keep,     setKeep]     = useState(false);
   const [error,    setError]    = useState('');
   const [loading,  setLoading]  = useState(false);
 
@@ -43,7 +42,7 @@ const LoginPage = ({ onLogin }) => {
         setError(data?.message || 'Invalid login ID or password.');
         return;
       }
-      onLogin?.(data, keep);
+      onLogin?.(data);
     } catch {
       setError('Could not reach the server. Please try again.');
     } finally {
@@ -146,19 +145,8 @@ const LoginPage = ({ onLogin }) => {
               </div>
             </div>
 
-            {/* Keep signed / Forgot */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={keep}
-                  onChange={(e) => setKeep(e.target.checked)}
-                  style={{ width: 15, height: 15, accentColor: '#0645C5', cursor: 'pointer' }}
-                />
-                <span style={{ fontSize: 14, color: '#4A5568', fontFamily: 'Manrope, sans-serif' }}>
-                  Keep me signed in
-                </span>
-              </label>
+            {/* Forgot */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 22 }}>
               <a href="#" style={{ fontSize: 14, color: '#0645C5', fontFamily: 'Manrope, sans-serif', fontWeight: 500, textDecoration: 'none' }}>
                 Forgot Password?
               </a>

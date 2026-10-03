@@ -41,10 +41,41 @@ const PAGES = {
 
 const SESSION_KEY = 'tamilpay_user';
 
-// "Keep me signed in" picks localStorage (survives closing the browser) vs
-// sessionStorage (cleared when the tab closes); either way a refresh restores it.
+// A sign-in lasts until the end of the day it was made (local midnight): it survives
+// refreshes and closing the browser, so staff sign in once in the morning, and the next
+// morning they are asked again. Manual sign-out still ends it immediately.
+const SESSION_EXPIRY_KEY = 'tamilpay_session_expiry';
+
+const endOfToday = () => {
+  const d = new Date();
+  d.setHours(24, 0, 0, 0);
+  return d.getTime();
+};
+
+const sessionExpiry = () => Number(localStorage.getItem(SESSION_EXPIRY_KEY)) || 0;
+
+function clearStoredSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_EXPIRY_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Storage unavailable — nothing to clean up.
+  }
+}
+
 function loadStoredUser() {
   try {
+    // Yesterday's (or older) sign-in is over, however it got here.
+    const expiry = sessionExpiry();
+    if (expiry && Date.now() >= expiry) {
+      clearStoredSession();
+      return null;
+    }
+    // A session saved before expiry existed gets today's end rather than lasting forever.
+    if (!expiry && localStorage.getItem(SESSION_KEY)) {
+      localStorage.setItem(SESSION_EXPIRY_KEY, String(endOfToday()));
+    }
     const raw = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
     if (raw) return JSON.parse(raw);
 
@@ -150,10 +181,11 @@ function App() {
     return () => { cancelled = true; };
   }, [user]);
 
-  const handleLogin = (loggedInUser, keepSignedIn) => {
+  const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
     try {
-      (keepSignedIn ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(loggedInUser));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(loggedInUser));
+      localStorage.setItem(SESSION_EXPIRY_KEY, String(endOfToday()));
     } catch {
       // Storage unavailable (e.g. private browsing) — session just won't survive a refresh.
     }
@@ -162,14 +194,27 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
-    try {
-      localStorage.removeItem(SESSION_KEY);
-      sessionStorage.removeItem(SESSION_KEY);
-    } catch {
-      // Storage unavailable — nothing to clean up.
-    }
+    clearStoredSession();
     navigate('login');
   };
+
+  // A tab left open past midnight signs out on its own. Polled rather than one long timer
+  // because timers stall while a laptop sleeps; the check also runs on returning to the tab.
+  useEffect(() => {
+    if (!user) return undefined;
+    const checkExpiry = () => {
+      const expiry = sessionExpiry();
+      if (expiry && Date.now() >= expiry) handleLogout();
+    };
+    const timer = setInterval(checkExpiry, 30000);
+    document.addEventListener('visibilitychange', checkExpiry);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', checkExpiry);
+    };
+    // handleLogout only touches setState/navigate, which are stable for this component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const CurrentPage = PAGES[currentPage] ?? HomePage;
   // Keying on the target customer/report (or lack of one) forces a clean remount

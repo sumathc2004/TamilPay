@@ -100,7 +100,7 @@ const buildReports = (isAdmin) => ({
     cells: (r) => [
       r.id,
       new Date(r.createdTime).toLocaleString(),
-      r.pgName,
+      <PgCell key="pg" r={r} />,
       r.customerName,
       r.payerName,
       r.cardNumber,
@@ -112,7 +112,7 @@ const buildReports = (isAdmin) => ({
       r.walletClosingBalance != null ? money(r.walletClosingBalance) : '—',
     ],
     exportRow: (r) => [
-      r.id, new Date(r.createdTime).toLocaleString(), r.pgName, r.customerName, r.payerName, r.cardNumber,
+      r.id, new Date(r.createdTime).toLocaleString(), r.pgName, r.pipeRefNumber || '', r.customerName, r.payerName, r.cardNumber,
       Number(r.amount).toFixed(2), Number(r.charges).toFixed(2),
       ...(isAdmin ? [Number(r.partnerCharges).toFixed(2), Number(r.profit).toFixed(2)] : []),
       r.status,
@@ -120,15 +120,15 @@ const buildReports = (isAdmin) => ({
       r.walletClosingBalance != null ? Number(r.walletClosingBalance).toFixed(2) : '',
     ],
     exportHeaders: [
-      'ID', 'Time', 'PG', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges',
+      'ID', 'Time', 'PG', 'Reference', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges',
       ...(isAdmin ? ['Partner Charges', 'Profit'] : []),
       'Status', 'Credited', 'Closing Balance',
     ],
-    exportWidths: [0.35, 1.3, 1, 1.1, 1.1, 0.7, 0.85, 0.85, ...(isAdmin ? [0.95, 0.8] : []), 0.8, 1.3, 1],
-    exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', ...(isAdmin ? ['right', 'right'] : []), 'left', 'left', 'right'],
+    exportWidths: [0.35, 1.3, 1, 1.5, 1.1, 1.1, 0.7, 0.85, 0.85, ...(isAdmin ? [0.95, 0.8] : []), 0.8, 1.3, 1],
+    exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', ...(isAdmin ? ['right', 'right'] : []), 'left', 'left', 'right'],
     // Profit reads green in the PDF too, same as on screen.
     // What the search box matches against: who the link was made for, and the card digits.
-    searchText: (r) => [r.payerName, r.cardNumber],
+    searchText: (r) => [r.payerName, r.cardNumber, r.pipeRefNumber],
     exportCellColor: (r, header) => (header === 'Profit' ? [56, 161, 105] : null),
   },
   // Credit card bill payments (Pay Out > Card Payments). One row per wallet entry: the DEBIT
@@ -142,7 +142,7 @@ const buildReports = (isAdmin) => ({
     statusOptions: ['SUCCESS', 'FAILED', 'PENDING'],
     fetchUrl: ({ walletId, fromDate, toDate, status }) =>
       apiUrl(`/api/bbps/report?walletId=${walletId}&fromDate=${fromDate}&toDate=${toDate}${status ? `&status=${status}` : ''}`),
-    headers: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Type', 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Details'],
+    headers: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Consumer Name', 'Card Number'],
     cells: (r) => [
       r.Id,
       new Date(r.createdTime).toLocaleString(),
@@ -152,27 +152,25 @@ const buildReports = (isAdmin) => ({
           <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.MOBILE_NUMBER || r.username || ''}</div>
         </div>,
       ] : []),
-      <span key="type" style={{ fontWeight: 700, color: r.txntype === 'CREDIT' ? '#38A169' : '#E53E3E' }}>
-        {r.txntype === 'CREDIT' ? 'REFUND' : 'PAYMENT'}
-      </span>,
       <span key="amount" style={{ fontWeight: 700 }}>{money(r.Amount)}</span>,
       money(r.charges),
       money(r.closingbalance),
       r.npciRef || '—',
       <StatusBadge key="status" status={r.status} />,
-      r.remarks || '—',
+      pick(r, ['customerName', 'CustomerName', 'consumerName']) || '—',
+      pick(r, ['cardNumber', 'CardNumber', 'card_number']) || '—',
     ],
     exportRow: (r) => [
       r.Id, new Date(r.createdTime).toLocaleString(),
       ...(isAdmin ? [r.retailerName || ''] : []),
-      r.txntype === 'CREDIT' ? 'REFUND' : 'PAYMENT',
       Number(r.Amount).toFixed(2), Number(r.charges).toFixed(2), Number(r.closingbalance).toFixed(2),
-      r.npciRef || '', r.status, r.remarks || '',
+      r.npciRef || '', r.status,
+      pick(r, ['customerName', 'CustomerName', 'consumerName']) || '',
+      pick(r, ['cardNumber', 'CardNumber', 'card_number']) || '',
     ],
-    exportHeaders: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Type', 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Details'],
-    exportWidths: [0.4, 1.3, ...(isAdmin ? [1.1] : []), 0.8, 0.8, 0.7, 1, 1.6, 0.8, 2],
-    exportAligns: ['left', 'left', ...(isAdmin ? ['left'] : []), 'left', 'right', 'right', 'right', 'left', 'left', 'left'],
-    exportCellColor: (r, header) => (header === 'Type' ? (r.txntype === 'CREDIT' ? [56, 161, 105] : [229, 62, 62]) : null),
+    exportHeaders: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Consumer Name', 'Card Number'],
+    exportWidths: [0.4, 1.3, ...(isAdmin ? [1.1] : []), 0.8, 0.7, 1, 1.6, 0.8, 1.3, 1.2],
+    exportAligns: ['left', 'left', ...(isAdmin ? ['left'] : []), 'right', 'right', 'right', 'left', 'left', 'left', 'left'],
     // Search finds a payment by its NPCI reference or, for admins, the retailer.
     searchText: (r) => [r.npciRef, r.retailerName, r.MOBILE_NUMBER],
     searchPlaceholder: 'Search NPCI ref or retailer',
@@ -284,7 +282,7 @@ const buildReports = (isAdmin) => ({
       cells: (r) => [
         r.id,
         new Date(r.createdTime).toLocaleString(),
-        r.pgName,
+        <PgCell key="pg" r={r} />,
         r.retailerName,
         r.payerName,
         r.cardNumber,
@@ -297,19 +295,28 @@ const buildReports = (isAdmin) => ({
         r.walletClosingBalance != null ? money(r.walletClosingBalance) : '—',
       ],
       exportRow: (r) => [
-        r.id, new Date(r.createdTime).toLocaleString(), r.pgName, r.retailerName, r.payerName, r.cardNumber,
+        r.id, new Date(r.createdTime).toLocaleString(), r.pgName, r.pipeRefNumber || '', r.retailerName, r.payerName, r.cardNumber,
         Number(r.amount).toFixed(2), Number(r.charges).toFixed(2), Number(r.partnerCharges).toFixed(2), Number(r.profit).toFixed(2), r.status,
         r.walletCreditedTime ? new Date(r.walletCreditedTime).toLocaleString() : '',
         r.walletClosingBalance != null ? Number(r.walletClosingBalance).toFixed(2) : '',
       ],
-      exportHeaders: ['ID', 'Time', 'PG', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges', 'Partner Charges', 'Profit', 'Status', 'Credited', 'Closing Balance'],
-      exportWidths: [0.35, 1.3, 1, 1.1, 1.1, 0.7, 0.85, 0.85, 0.95, 0.8, 0.8, 1.3, 1],
-      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'left', 'left', 'right'],
-      searchText: (r) => [r.payerName, r.cardNumber],
+      exportHeaders: ['ID', 'Time', 'PG', 'Reference', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges', 'Partner Charges', 'Profit', 'Status', 'Credited', 'Closing Balance'],
+      exportWidths: [0.35, 1.3, 1, 1.5, 1.1, 1.1, 0.7, 0.85, 0.85, 0.95, 0.8, 0.8, 1.3, 1],
+      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'left', 'left', 'right'],
+      searchText: (r) => [r.payerName, r.cardNumber, r.pipeRefNumber],
       exportCellColor: (r, header) => (header === 'Profit' ? [56, 161, 105] : null),
     },
   } : {}),
 });
+
+// PG name with the gateway's reference number underneath — the same number the wallet
+// ledger shows as that credit's UTR, so a link can be matched across both reports.
+const PgCell = ({ r }) => (
+  <div>
+    <div style={{ fontWeight: 600 }}>{r.pgName}</div>
+    <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.pipeRefNumber || '—'}</div>
+  </div>
+);
 
 const StatusBadge = ({ status }) => (
   <span
@@ -509,7 +516,15 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
   };
 
   return (
-    <div className="theme-purple" style={{ position: 'relative', minHeight: 'calc(100vh - 64px)', overflow: 'hidden', background: 'transparent' }}>
+    // An open report fills the whole content area (the table takes the leftover height and
+    // scrolls inside it); the menu is short and just sizes to its tiles.
+    <div
+        className="theme-purple"
+        style={{
+          position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', overflow: 'hidden', background: 'transparent',
+          ...(report ? { height: 'calc(100vh - var(--tp-bar, 92px))', display: 'flex', flexDirection: 'column' } : {}),
+        }}
+      >
       <div
         style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -518,7 +533,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
         }}
       />
 
-      <div style={{ position: 'relative', zIndex: 2, padding: '14px clamp(16px, 5vw, 80px) 20px' }}>
+      <div style={{ position: 'relative', zIndex: 2, padding: '14px clamp(16px, 3vw, 32px) 20px', ...(report ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
         <button
           className="btn-ghost"
           onClick={() => (step === 'menu' ? onNavigate?.('home') : setStep('menu'))}
@@ -577,7 +592,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
         )}
 
         {report && (
-          <div style={{ ...cardStyle, maxWidth: 'none', padding: '16px clamp(16px, 3vw, 24px)' }}>
+          <div style={{ ...cardStyle, maxWidth: 'none', padding: '16px clamp(16px, 3vw, 24px)', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 18, color: 'var(--theme-heading)', margin: 0 }}>
@@ -688,14 +703,15 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
             )}
 
             {!loading && !error && visibleRows.length > 0 && (
-              <div className="table-scroll">
+              <div className="table-scroll" style={{ flex: 1, minHeight: 160, overflowY: 'auto' }}>
                 <table style={{ width: '100%', minWidth: 640, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
                   <thead>
-                    <tr style={{ background: '#F3F7FD', textAlign: 'left' }}>
+                    <tr style={{ textAlign: 'left' }}>
                       {report.headers.map((h) => (
                         <th
                           key={h}
                           style={{
+                            position: 'sticky', top: 0, zIndex: 1, background: '#F3F7FD',
                             padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase',
                             color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap',
                           }}

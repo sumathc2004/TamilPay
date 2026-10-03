@@ -61,7 +61,7 @@
 }
 
 html, body, #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 html {
@@ -72,13 +72,13 @@ html {
 body {
   font-family: 'Inter', 'Manrope', sans-serif;
   background-color: #F8F9FC;
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   -webkit-font-smoothing: antialiased;
 }
 
 #root {
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
 }
 
@@ -1781,7 +1781,7 @@ body {
   grid-auto-rows: minmax(134px, 200px);
   align-content: center;
 }
-.tp-body-panels .tp-sec-bbps .tp-panel-items { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tp-body-panels .tp-sec-bbps .tp-panel-items { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tp-body-panels .tp-sec-more .tp-panel-items { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* Tiles stretch to the row instead of setting it, so a panel with four tiles
@@ -2212,6 +2212,10 @@ body {
     flex-direction: column;
     overflow: auto;
   }
+  /* A page root with overflow:hidden has no automatic minimum height in a flex column,
+     so it gets shrunk to the viewport and clips its own bottom instead of letting this
+     column scroll. Keep every page at its natural height. */
+  .app-shell-content > * { flex-shrink: 0; }
 }
 
 /* The rail's trust badge, on blue — the light-green card read as a hole in it.

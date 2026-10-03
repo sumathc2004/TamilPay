@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import QRCode from 'qrcode';
 import {
-  ArrowRight, Check, ChevronDown, CreditCard, FileChartColumn, Landmark,
-  LayoutGrid, QrCode, ScanQrCode, SendHorizontal, Settings, Smartphone, TvMinimal,
-  WalletCards, WalletMinimal, X, Zap,
+  ArrowRight, Check, ChevronDown, CreditCard, FileChartColumn, Fingerprint, IdCard,
+  LayoutGrid, QrCode, ScanQrCode, SendHorizontal, Settings,
+  WalletCards, WalletMinimal, X,
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { apiUrl } from '../utils/api';
@@ -70,9 +70,9 @@ const formatCharge = (chargeType, chargeValue) => {
 const buildUpiUri = (vpa, payeeName) =>
   `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(payeeName || 'TamilPay')}&cu=INR`;
 
-/** Dashboard home — four colored quadrants (Pay In / BBPS / Pay Out / More), each a row
+/** Dashboard home — four colored quadrants (Pay In / Verification / Pay Out / More), each a row
  * of tiles. Tiles with a working backend (PG, Static QR, IMPS, Report, Admin) navigate
- * or open a modal; the rest (Dynamic QR, Bill Payments, BBPS) render visible but inert
+ * or open a modal; the rest (Dynamic QR, Aadhar/PAN Verification) render visible but inert
  * since there's nothing to wire them to yet. */
 const HomePage = ({ onNavigate, user }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
@@ -229,13 +229,12 @@ const HomePage = ({ onNavigate, user }) => {
         { label: 'Card Payments', Icon: WalletCards, live: true, onClick: () => onNavigate?.('cardPayments') },
       ],
     },
+    // Keeps the 'bbps' key because the board's grid placement in index.css is keyed on it.
     {
-      key: 'bbps', title: 'BBPS', caption: 'Recharge and bill payments', tone: 'amber',
+      key: 'bbps', title: 'Verification', caption: 'Verify customer identity', tone: 'amber',
       items: [
-        { label: 'Recharge', Icon: Smartphone },
-        { label: 'DTH', Icon: TvMinimal },
-        { label: 'Loan', Icon: Landmark },
-        { label: 'Electricity', Icon: Zap },
+        { label: 'Aadhar Verification', Icon: Fingerprint },
+        { label: 'PAN Verification', Icon: IdCard },
       ],
     },
     {
@@ -357,15 +356,9 @@ const HomePage = ({ onNavigate, user }) => {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={requestQr}
-            disabled={qrLoading}
-            className="signin-btn"
-            style={{ background: 'linear-gradient(90deg, #1565D8 0%, #0D4FB0 100%)', boxShadow: '0 4px 22px rgba(21,101,216,0.32)' }}
-          >
-            {qrLoading ? 'Requesting…' : 'Request'}
-          </button>
+          {qrLoading && !qrInfo && (
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#7C8491', margin: 0 }}>Loading QR…</p>
+          )}
 
           {qrError && (
             <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#E53E3E', margin: '14px 0 0' }}>
