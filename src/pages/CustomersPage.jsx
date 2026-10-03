@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRightLeft, Check, CheckCircle2, Eye, Pencil, Plus, Trash2, Users, Wallet, X } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, BookOpen, Check, CheckCircle2, ChevronDown, CreditCard, Eye, FileChartColumn, Pencil, Plus, QrCode, Receipt, Trash2, Users, Wallet, WalletCards, X } from 'lucide-react';
 import { fieldErrorStyle, iconBtnStyle } from '../styles/formStyles';
 import { getCustomerId, MASTER_CLIENT_ID } from '../utils/customer';
 import { apiUrl } from '../utils/api';
@@ -12,6 +12,18 @@ import Modal from '../components/Modal';
  * Adding, viewing, and editing all happen on their own full page
  * (CustomerDetailPage) — this page is just the list and quick delete.
  */
+// The reports that belong to one wallet — the ones a row's Reports menu can open for that
+// customer (the client-wide admin reports aren't about any single customer).
+const CUSTOMER_REPORTS = [
+  { key: 'transfer', label: 'Transfer Reports', Icon: Receipt },
+  { key: 'pgReports', label: 'PG Reports', Icon: CreditCard },
+  { key: 'cardReports', label: 'Credit Card Reports', Icon: WalletCards },
+  { key: 'ledger', label: 'Wallet Ledger', Icon: BookOpen },
+  { key: 'qrReports', label: 'QR Reports', Icon: QrCode },
+];
+const REPORT_MENU_WIDTH = 224;
+const REPORT_MENU_HEIGHT = CUSTOMER_REPORTS.length * 44 + 16;
+
 const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +32,32 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
   const [deletingCustomer, setDeletingCustomer] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+
+  // Row Reports dropdown: fixed-position (the table's scroll box would clip an absolute one),
+  // placed from the button's rectangle and flipped upward near the bottom of the screen.
+  const [reportMenu, setReportMenu] = useState(null); // { customer, left, top }
+  const openReportMenu = (e, customer) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const fitsBelow = rect.bottom + 6 + REPORT_MENU_HEIGHT < window.innerHeight;
+    setReportMenu({
+      customer,
+      left: Math.max(8, Math.min(rect.right - REPORT_MENU_WIDTH, window.innerWidth - REPORT_MENU_WIDTH - 8)),
+      top: fitsBelow ? rect.bottom + 6 : Math.max(8, rect.top - 6 - REPORT_MENU_HEIGHT),
+    });
+  };
+  useEffect(() => {
+    if (!reportMenu) return undefined;
+    const close = () => setReportMenu(null);
+    const onKey = (e) => e.key === 'Escape' && close();
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [reportMenu]);
 
   const [walletBusyId, setWalletBusyId] = useState(null);
   const [walletError, setWalletError] = useState(null);
@@ -344,10 +382,10 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
               overflowY: 'hidden',
             }}
           >
-            <table style={{ width: '100%', minWidth: 880, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif' }}>
+            <table style={{ width: '100%', minWidth: 980, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif' }}>
               <thead>
                 <tr style={{ background: '#F3F7FD', textAlign: 'left' }}>
-                  {['Customer', 'PAN', 'Mobile', 'Email', 'Store', 'Wallet', 'Transfer', 'Payout Charges', 'Actions'].map((h) => (
+                  {['Customer', 'PAN', 'Mobile', 'Email', 'Store', 'Wallet', 'Transfer', 'Payout Charges', 'Actions', 'Reports'].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -524,6 +562,26 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
                           </button>
                         </div>
                       </td>
+                      <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
+                        {c.username ? (
+                          <button
+                            type="button"
+                            className="icon-btn-anim"
+                            aria-haspopup="menu"
+                            aria-expanded={reportMenu?.customer === c}
+                            onClick={(e) => (reportMenu?.customer === c ? setReportMenu(null) : openReportMenu(e, c))}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 9, cursor: 'pointer',
+                              border: '1px solid rgba(1,87,111,0.1)', background: '#F3F7FD', color: '#12284A',
+                              fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 12.5,
+                            }}
+                          >
+                            <FileChartColumn size={14} /> Reports <ChevronDown size={13} />
+                          </button>
+                        ) : (
+                          <span style={{ color: '#9CA3AF' }} title="Add a wallet first">—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -680,6 +738,46 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
             Close
           </button>
         </Modal>
+      )}
+
+      {reportMenu && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onMouseDown={() => setReportMenu(null)} />
+          <div
+            role="menu"
+            style={{
+              position: 'fixed', left: reportMenu.left, top: reportMenu.top, width: REPORT_MENU_WIDTH, zIndex: 50, padding: 8,
+              background: '#fff', border: '1px solid #E5E9F0', borderRadius: 14, boxShadow: '0 12px 32px rgba(13, 79, 176, 0.16)',
+            }}
+          >
+            {CUSTOMER_REPORTS.map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                type="button"
+                role="menuitem"
+                className="btn-ghost"
+                onClick={() => {
+                  const customer = reportMenu.customer;
+                  const id = getCustomerId(customer);
+                  const walletId = walletIds[id] ?? customer.walletId;
+                  setReportMenu(null);
+                  if (!walletId) {
+                    window.alert('This customer’s wallet is still loading — try again in a moment.');
+                    return;
+                  }
+                  onNavigate?.('reports', { report: key, customerId: id, customer: { id, walletId, name: customer.FULL_NAME } });
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', height: 44, padding: '0 12px', borderRadius: 9,
+                  background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13.5, color: '#12284A',
+                }}
+              >
+                <Icon size={16} color="#1565D8" /> {label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

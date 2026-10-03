@@ -432,6 +432,9 @@ const StatusBadge = ({ status }) => {
 const ReportsPage = ({ onNavigate, user, navParams }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
   const REPORTS = buildReports(isAdmin);
+  // Opened from a row's Reports menu on the Customers page: every wallet-based report is
+  // then that one customer's — their wallet instead of the signed-in user's.
+  const scopedCustomer = navParams?.customer ?? null;
 
   // Admin's own "IMPS Report" tile deep-links straight into that report instead of
   // opening the generic menu first — everywhere else still starts at 'menu' as before.
@@ -474,11 +477,11 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
   const fetchReport = useCallback(() => {
     // Admin IMPS Report is client-wide, not scoped to the logged-in admin's own
     // wallet — the only report that doesn't need a walletId to make sense at all.
-    if (!report || (!report.noWalletRequired && !user?.walletId)) return;
+    if (!report || (!report.noWalletRequired && !scopedCustomer && !user?.walletId)) return;
     if (report.needsCustomer && !customerWalletId) return;
     setLoading(true);
     setError(null);
-    const walletId = report.needsCustomer ? customerWalletId : report.resolveWalletId ? report.resolveWalletId(user) : user.walletId;
+    const walletId = scopedCustomer ? scopedCustomer.walletId : report.needsCustomer ? customerWalletId : report.resolveWalletId ? report.resolveWalletId(user) : user.walletId;
     fetch(report.fetchUrl({ clientId: MASTER_CLIENT_ID, walletId, fromDate, toDate, status: statusFilter }))
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
@@ -493,7 +496,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [user, fromDate, toDate, report, statusFilter, customerWalletId]);
+  }, [user, fromDate, toDate, report, statusFilter, customerWalletId, scopedCustomer]);
 
   useEffect(() => {
     if (report) fetchReport();
@@ -610,6 +613,10 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     doc.setFontSize(10);
     doc.setTextColor(124, 132, 145);
     doc.text(`${fromDate} to ${toDate}`, left, y);
+    if (scopedCustomer) {
+      y += 14;
+      doc.text(`Customer: ${scopedCustomer.name}`, left, y);
+    }
     y += 26;
 
     drawHeader();
@@ -683,7 +690,9 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
       doc.text(label, left, y);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(16, 42, 80);
-      doc.text(String(value ?? '—'), right, y, { align: 'right' });
+      // The PDF's built-in font has no ₹ glyph (it prints a stray "¹" and spaces out the digits),
+      // so amounts are written as "Rs. 108.00" in the document.
+      doc.text(String(value ?? '—').replace(/₹/g, 'Rs. '), right, y, { align: 'right' });
       y += 10;
       doc.setDrawColor(236, 239, 244);
       doc.line(left, y, right, y);
@@ -751,7 +760,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
       <div style={{ position: 'relative', zIndex: 2, padding: '14px clamp(16px, 3vw, 32px) 20px', ...(report ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
         <button
           className="btn-ghost"
-          onClick={() => (step === 'menu' ? onNavigate?.('home') : setStep('menu'))}
+          onClick={() => (scopedCustomer ? onNavigate?.('customers') : step === 'menu' ? onNavigate?.('home') : setStep('menu'))}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
             cursor: 'pointer', color: '#7C8491', fontFamily: 'Inter, sans-serif', fontWeight: 600,
@@ -799,6 +808,16 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                 <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 18, color: 'var(--theme-heading)', margin: 0 }}>
                   {report.label}
                 </h1>
+                {scopedCustomer && (
+                  <span
+                    style={{
+                      display: 'inline-block', padding: '3px 10px', borderRadius: 8, fontSize: 11.5, fontWeight: 700,
+                      background: 'var(--theme-tint)', color: 'var(--theme-accent)',
+                    }}
+                  >
+                    {scopedCustomer.name}
+                  </span>
+                )}
                 {fromDate === todayIso() && toDate === todayIso() && (
                   <span
                     style={{
