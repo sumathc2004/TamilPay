@@ -37,7 +37,20 @@ const readRow = (r) => ({
   amount: pick(r, ['amount', 'Amount']),
   utr: pick(r, ['utr', 'Utr', 'UTR']),
   status: pick(r, ['status', 'Status']),
+  // Who is asking: the retailer, their mobile and their shop (storeName is added by our
+  // backend — the remote names the retailer but not the shop).
+  retailerName: pick(r, ['retailerName', 'RetailerName']),
+  mobile: pick(r, ['username', 'Username']),
+  storeName: pick(r, ['storeName', 'StoreName']),
+  qrName: pick(r, ['QrName', 'qrName']),
+  creditAmount: pick(r, ['creditAmount', 'CreditAmount']),
+  remarks: pick(r, ['remarks', 'Remarks']),
 });
+
+// A second, muted line under a table value.
+const Sub = ({ children }) => (
+  <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 500, color: '#8A93A4', whiteSpace: 'normal' }}>{children}</div>
+);
 
 /**
  * Admin > QR Requests — pending collect requests awaiting approval (with Approve/
@@ -195,10 +208,10 @@ const QrRequestsPage = () => {
 
           {!pendingLoading && !pendingError && pending?.length > 0 && (
             <div className="table-scroll">
-              <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
+              <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
                 <thead>
                   <tr style={{ background: '#F3F7FD', textAlign: 'left' }}>
-                    {['ID', 'Time', 'VPA', 'Amount', 'UTR', ''].map((h) => (
+                    {['ID', 'Time', 'Retailer', 'Shop', 'VPA', 'Amount', 'UTR', ''].map((h) => (
                       <th key={h} style={{ padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
@@ -213,9 +226,23 @@ const QrRequestsPage = () => {
                       <tr key={r.id ?? i} style={{ borderTop: '1px solid rgba(1,87,111,0.06)' }}>
                         <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.id ?? '—'}</td>
                         <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.createdTime ? new Date(r.createdTime).toLocaleString() : '—'}</td>
-                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.vpa ?? '—'}</td>
-                        <td style={{ padding: '6px 12px', color: '#4A5568', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.amount != null ? money(r.amount) : '—'}</td>
-                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.utr ?? '—'}</td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontWeight: 600, color: '#12284A' }}>{r.retailerName ?? '—'}</div>
+                          {r.mobile && <Sub>{r.mobile}</Sub>}
+                        </td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', fontWeight: 600 }}>{r.storeName || '—'}</td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
+                          {r.vpa ?? '—'}
+                          {r.qrName && <Sub>{r.qrName}</Sub>}
+                        </td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          {r.amount != null ? money(r.amount) : '—'}
+                          {r.creditAmount != null && <Sub>Credit {money(r.creditAmount)}</Sub>}
+                        </td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
+                          {r.utr ?? '—'}
+                          {r.remarks && <Sub>{r.status === 'REJECTED' ? `Rejected: ${r.remarks}` : r.remarks}</Sub>}
+                        </td>
                         <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button
@@ -269,10 +296,10 @@ const QrRequestsPage = () => {
 
           {!reportLoading && !reportError && report?.length > 0 && (
             <div className="table-scroll">
-              <table style={{ width: '100%', minWidth: 520, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
+              <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
                 <thead>
                   <tr style={{ background: '#F3F7FD', textAlign: 'left' }}>
-                    {['ID', 'Time', 'VPA', 'Amount', 'UTR', 'Status'].map((h) => (
+                    {['ID', 'Time', 'Retailer', 'Shop', 'VPA', 'Amount', 'UTR', 'Status'].map((h) => (
                       <th key={h} style={{ padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
@@ -286,9 +313,23 @@ const QrRequestsPage = () => {
                       <tr key={r.id ?? i} style={{ borderTop: '1px solid rgba(1,87,111,0.06)' }}>
                         <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.id ?? '—'}</td>
                         <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.createdTime ? new Date(r.createdTime).toLocaleString() : '—'}</td>
-                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.vpa ?? '—'}</td>
-                        <td style={{ padding: '6px 12px', color: '#4A5568', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.amount != null ? money(r.amount) : '—'}</td>
-                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.utr ?? '—'}</td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontWeight: 600, color: '#12284A' }}>{r.retailerName ?? '—'}</div>
+                          {r.mobile && <Sub>{r.mobile}</Sub>}
+                        </td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', fontWeight: 600 }}>{r.storeName || '—'}</td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
+                          {r.vpa ?? '—'}
+                          {r.qrName && <Sub>{r.qrName}</Sub>}
+                        </td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          {r.amount != null ? money(r.amount) : '—'}
+                          {r.creditAmount != null && <Sub>Credit {money(r.creditAmount)}</Sub>}
+                        </td>
+                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
+                          {r.utr ?? '—'}
+                          {r.remarks && <Sub>{r.status === 'REJECTED' ? `Rejected: ${r.remarks}` : r.remarks}</Sub>}
+                        </td>
                         <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}><StatusBadge status={r.status} /></td>
                       </tr>
                     );

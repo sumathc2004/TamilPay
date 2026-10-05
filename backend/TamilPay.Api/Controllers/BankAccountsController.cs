@@ -10,6 +10,24 @@ namespace TamilPay.Api.Controllers;
 [Route("api/[controller]")]
 public class BankAccountsController(RemoteApiClient remoteApi) : ControllerBase
 {
+    /// <summary>
+    /// The remote has no bank name on a saved account: it finds one by matching the account's
+    /// IFSC against its bank list, and several banks in that list share one IFSC (State Bank of
+    /// India, State Bank Of Mysore, State Bank of Patiala and "Sbi new" are all SBIN0000001). So a
+    /// single account comes back once per match — the same Id four times, only BankName differing.
+    /// One row per account is kept, preferring the name that ends in the IFSC's own bank code
+    /// ("State Bank of India - SBIN") because that is the bank the IFSC belongs to.
+    /// </summary>
+    private static List<BankAccount> OneRowPerAccount(IEnumerable<BankAccount> rows) =>
+        rows.GroupBy(a => a.Id)
+            .Select(g =>
+            {
+                var code = g.First().Ifsc.Length >= 4 ? g.First().Ifsc[..4] : string.Empty;
+                return g.FirstOrDefault(a => code.Length > 0 &&
+                           a.BankName.EndsWith("- " + code, StringComparison.OrdinalIgnoreCase)) ?? g.First();
+            })
+            .ToList();
+
     // A mobile number can have more than one bank account row, so every match is
     // returned, not just the first.
     [HttpGet]
@@ -24,7 +42,7 @@ public class BankAccountsController(RemoteApiClient remoteApi) : ControllerBase
         if (!result.IsSuccess || result.Data is not { Count: > 0 } accounts)
             return NotFound();
 
-        return Ok(accounts);
+        return Ok(OneRowPerAccount(accounts));
     }
 
     [HttpPost]
@@ -60,7 +78,7 @@ public class BankAccountsController(RemoteApiClient remoteApi) : ControllerBase
         });
 
         var accounts = (await Task.WhenAll(lookups)).SelectMany(list => list);
-        return Ok(accounts);
+        return Ok(OneRowPerAccount(accounts));
     }
 
     /// <summary>

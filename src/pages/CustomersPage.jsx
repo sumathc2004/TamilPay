@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRightLeft, BookOpen, Check, CheckCircle2, ChevronDown, CreditCard, Eye, FileChartColumn, Pencil, Plus, QrCode, Receipt, Trash2, Users, Wallet, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Eye, FileChartColumn, Pencil, Plus, QrCode, Receipt, Search, Trash2, Users, Wallet, WalletCards, X } from 'lucide-react';
 import { fieldErrorStyle, iconBtnStyle } from '../styles/formStyles';
 import { getCustomerId, MASTER_CLIENT_ID } from '../utils/customer';
 import { apiUrl } from '../utils/api';
@@ -22,10 +22,17 @@ const CUSTOMER_REPORTS = [
   { key: 'qrReports', label: 'QR Reports', Icon: QrCode },
 ];
 const REPORT_MENU_WIDTH = 224;
+const PAGE_SIZE = 15;
+
+// ₹2,515.32 — Indian digit grouping, two decimals.
+const rupees = (value) => `₹${Number(value ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const REPORT_MENU_HEIGHT = CUSTOMER_REPORTS.length * 44 + 16;
 
 const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
   const [customers, setCustomers] = useState([]);
+  const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -250,343 +257,257 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
     }
   };
 
+  // ── Derived view data: summary figures, the search/role filter, and the current page ──
+  const isRetailer = (c) => (c.roleName || '').toLowerCase() === 'retailer';
+  const needle = query.trim().toLowerCase();
+  const filtered = customers.filter((c) => {
+    if (roleFilter === 'retailer' && !isRetailer(c)) return false;
+    if (roleFilter === 'admin' && isRetailer(c)) return false;
+    if (!needle) return true;
+    return [c.FULL_NAME, c.MOBILE_NUMBER, c.PAN, c.EMAIL_ID, c.STORE_NAME]
+      .some((v) => String(v ?? '').toLowerCase().includes(needle));
+  });
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const withWallet = customers.filter((c) => c.username);
+  const balancesLoaded = withWallet.length > 0 && withWallet.every((c) => walletBalances[getCustomerId(c)] !== undefined);
+  const totalBalance = withWallet.reduce((sum, c) => sum + Number(walletBalances[getCustomerId(c)] ?? 0), 0);
+  const stats = [
+    { label: 'Total customers', value: customers.length, Icon: Users, tone: 'blue' },
+    { label: 'Retailers', value: customers.filter(isRetailer).length, Icon: Wallet, tone: 'orange' },
+    { label: 'With a wallet', value: withWallet.length, Icon: CheckCircle2, tone: 'green' },
+    { label: 'Total wallet balance', value: balancesLoaded ? rupees(totalBalance) : '…', Icon: CreditCard, tone: 'blue' },
+  ];
+
+  const roleTabs = [
+    { key: 'all', label: 'All', count: customers.length },
+    { key: 'retailer', label: 'Retailers', count: customers.filter(isRetailer).length },
+    { key: 'admin', label: 'Admins', count: customers.filter((c) => !isRetailer(c)).length },
+  ];
+
   return (
-    <div
-      style={{
-        position: 'relative',
-        minHeight: 'calc(100vh - 64px)',
-        overflow: 'hidden',
-        background: '#ffffff',
-      }}
-    >
-      {/* ── Soft background diagonal swoosh, matching HomePage ── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: 'radial-gradient(ellipse at 10% 20%, rgba(255,122,0,0.06) 0%, transparent 60%), linear-gradient(135deg, rgba(255,235,225,0.45) 0%, rgba(255,215,200,0.2) 40%, transparent 75%)',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      />
-
-      {/* ── Page content ── */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 2,
-          padding: '20px clamp(16px, 5vw, 80px)',
-        }}
-      >
-        {/* Top row: Back link + Add Customer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-          <button
-            className="btn-ghost"
-            onClick={() => onNavigate?.('home')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#7C8491',
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: 14,
-              padding: 0,
-            }}
-          >
-            <ArrowLeft size={16} /> Back
+    <div className="cu-page">
+      <div className="cu-inner">
+        {/* Header: title and the one primary action */}
+        <header className="cu-head">
+          <div className="cu-head-text">
+            <button type="button" className="cu-back" onClick={() => onNavigate?.('home')} aria-label="Back to home">
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h1 className="cu-title">Customers</h1>
+              <p className="cu-subtitle">Everyone on your account — wallets, payouts and reports in one place.</p>
+            </div>
+          </div>
+          <button type="button" className="cu-add" onClick={() => onNavigate?.('customerDetail', { mode: 'create' })}>
+            <Plus size={16} strokeWidth={2.5} /> Add Customer
           </button>
+        </header>
 
-          <button
-            onClick={() => onNavigate?.('customerDetail', { mode: 'create' })}
-            className="signin-btn"
-            style={{ width: 'auto', padding: '0 16px', height: 34, fontSize: 13 }}
-          >
-            <Plus size={14} strokeWidth={2.5} /> Add Customer
-          </button>
-        </div>
+        {!loading && !error && customers.length > 0 && (
+          <>
+            {/* At-a-glance figures */}
+            <div className="cu-stats">
+              {stats.map(({ label, value, Icon, tone }) => (
+                <div key={label} className={`cu-stat cu-stat--${tone}`}>
+                  <span className="cu-stat-icon"><Icon size={20} strokeWidth={2} /></span>
+                  <div>
+                    <p className="cu-stat-label">{label}</p>
+                    <p className="cu-stat-value">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Search and role filter */}
+            <div className="cu-toolbar">
+              <div className="cu-tabs" role="tablist" aria-label="Filter by role">
+                {roleTabs.map((t) => (
+                  <button
+                    key={t.key} type="button" role="tab" aria-selected={roleFilter === t.key}
+                    className={`cu-tab${roleFilter === t.key ? ' is-active' : ''}`}
+                    onClick={() => { setRoleFilter(t.key); setPage(1); }}
+                  >
+                    {t.label} <span>{t.count}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="cu-search">
+                <Search size={16} className="cu-search-icon" />
+                <input
+                  type="text" value={query} placeholder="Search name, mobile, PAN, email or store"
+                  aria-label="Search customers" autoComplete="off"
+                  onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                />
+                {query && (
+                  <button type="button" className="cu-search-clear" onClick={() => { setQuery(''); setPage(1); }} aria-label="Clear search">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Content */}
-        {loading && (
-          <p style={{ fontFamily: 'Inter, sans-serif', color: '#7C8491' }}>Loading customers…</p>
-        )}
+        {loading && <p className="cu-state">Loading customers…</p>}
 
-        {!loading && error && (
-          <p style={{ fontFamily: 'Inter, sans-serif', color: '#E53E3E' }}>
-            Couldn't load customers: {error}
-          </p>
-        )}
+        {!loading && error && <p className="cu-state cu-state--error">Couldn't load customers: {error}</p>}
 
         {!loading && !error && customers.length === 0 && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              flexWrap: 'wrap',
-              background: 'rgba(255,255,255,0.96)',
-              border: '1px solid rgba(1,87,111,0.06)',
-              borderRadius: 20,
-              padding: 'clamp(20px, 5vw, 28px) clamp(18px, 6vw, 32px)',
-              maxWidth: 520,
-              boxShadow: '0 2px 20px rgba(13, 79, 176, 0.08)',
-            }}
-          >
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 14,
-                background: '#FFF5F5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Users size={22} color="#F26A1B" strokeWidth={1.8} />
-            </div>
-            <div>
-              <p style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, color: '#0D4FB0', margin: 0 }}>
-                No customers yet
-              </p>
-              <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: '#7C8491', margin: '4px 0 0' }}>
-                Use "Add Customer" above to create the first one.
-              </p>
-            </div>
+          <div className="cu-empty">
+            <span className="cu-empty-icon"><Users size={24} strokeWidth={1.8} /></span>
+            <p className="cu-empty-title">No customers yet</p>
+            <p className="cu-empty-text">Use “Add Customer” above to create the first one.</p>
           </div>
         )}
 
-        {!loading && !error && walletError && (
-          <p style={{ ...fieldErrorStyle, marginBottom: 12 }}>{walletError}</p>
+        {!loading && !error && walletError && <p style={{ ...fieldErrorStyle, marginBottom: 12 }}>{walletError}</p>}
+        {!loading && !error && payoutError && <p style={{ ...fieldErrorStyle, marginBottom: 12 }}>{payoutError}</p>}
+
+        {!loading && !error && customers.length > 0 && filtered.length === 0 && (
+          <div className="cu-empty">
+            <span className="cu-empty-icon"><Search size={22} strokeWidth={1.8} /></span>
+            <p className="cu-empty-title">No customers match</p>
+            <p className="cu-empty-text">Try a different name, number or filter.</p>
+          </div>
         )}
 
-        {!loading && !error && payoutError && (
-          <p style={{ ...fieldErrorStyle, marginBottom: 12 }}>{payoutError}</p>
-        )}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="cu-card">
+            <div className="table-scroll cu-scroll">
+              <table className="cu-table">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>PAN</th>
+                    <th>Mobile</th>
+                    <th>Email</th>
+                    <th>Store</th>
+                    <th className="is-num">Wallet</th>
+                    <th>Transfer</th>
+                    <th>Payout Charges</th>
+                    <th>Actions</th>
+                    <th>Reports</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((c) => {
+                    const id = getCustomerId(c);
+                    return (
+                      <tr key={id}>
+                        <td>
+                          <div className="cu-person">
+                            <Avatar name={c.FULL_NAME} size={36} />
+                            <div className="cu-person-text">
+                              <span className="cu-person-name">{c.FULL_NAME}</span>
+                              {c.roleName && <span className={`cu-role cu-role--${isRetailer(c) ? 'retailer' : 'admin'}`}>{c.roleName}</span>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="cu-mono">{c.PAN}</td>
+                        <td className="cu-nowrap">+91 {c.MOBILE_NUMBER}</td>
+                        <td><span className="cu-email" title={c.EMAIL_ID}>{c.EMAIL_ID}</span></td>
+                        <td><span className="cu-store" title={c.STORE_NAME}>{c.STORE_NAME}</span></td>
+                        <td className="is-num">
+                          {c.username ? (
+                            <span className="cu-balance">{rupees(walletBalances[id] ?? c.lastBalance ?? 0)}</span>
+                          ) : (
+                            <button
+                              type="button" className="cu-chip-btn cu-chip-btn--orange"
+                              onClick={() => handleAddWallet(id)} disabled={walletBusyId === id}
+                            >
+                              <Wallet size={13} /> {walletBusyId === id ? 'Adding…' : 'Add'}
+                            </button>
+                          )}
+                        </td>
+                        <td>
+                          {c.username ? (
+                            <button type="button" className="cu-chip-btn" onClick={() => openTransfer(c)}>
+                              <ArrowRightLeft size={13} /> Transfer
+                            </button>
+                          ) : (
+                            <span className="cu-dash">—</span>
+                          )}
+                        </td>
+                        <td>
+                          {!c.username ? (
+                            <span className="cu-dash">—</span>
+                          ) : editingPayoutId === id ? (
+                            <div className="cu-payout-edit">
+                              <input
+                                type="text" inputMode="decimal" autoFocus value={payoutInput} aria-label="Payout charge"
+                                onChange={(e) => setPayoutInput(e.target.value.replace(/[^0-9.]/g, ''))}
+                              />
+                              <button type="button" className="icon-btn-anim" title="Save" onClick={() => handleSavePayout(id)} disabled={payoutBusyId === id} style={iconBtnStyle}>
+                                <Check size={16} color="#38A169" />
+                              </button>
+                              <button type="button" className="icon-btn-anim" title="Cancel" onClick={cancelEditPayout} disabled={payoutBusyId === id} style={iconBtnStyle}>
+                                <X size={16} color="#7C8491" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="cu-payout">
+                              <span>{payoutCharges[id] !== undefined ? `₹${Number(payoutCharges[id]).toFixed(4)}` : '…'}</span>
+                              <button type="button" className="icon-btn-anim" title="Edit payout charges" onClick={() => startEditPayout(id)} style={iconBtnStyle}>
+                                <Pencil size={14} color="#F26A1B" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <div className="cu-actions">
+                            <button type="button" className="cu-icon-btn" title="View" aria-label={`View ${c.FULL_NAME}`} onClick={() => onNavigate?.('customerDetail', { customerId: id, mode: 'view' })}>
+                              <Eye size={16} />
+                            </button>
+                            <button type="button" className="cu-icon-btn" title="Edit" aria-label={`Edit ${c.FULL_NAME}`} onClick={() => onNavigate?.('customerDetail', { customerId: id, mode: 'edit' })}>
+                              <Pencil size={16} />
+                            </button>
+                            <button type="button" className="cu-icon-btn cu-icon-btn--danger" title="Delete" aria-label={`Delete ${c.FULL_NAME}`} onClick={() => confirmDelete(c)}>
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          {c.username ? (
+                            <button
+                              type="button" className="cu-chip-btn"
+                              aria-haspopup="menu" aria-expanded={reportMenu?.customer === c}
+                              onClick={(e) => (reportMenu?.customer === c ? setReportMenu(null) : openReportMenu(e, c))}
+                            >
+                              <FileChartColumn size={13} /> Reports <ChevronDown size={12} />
+                            </button>
+                          ) : (
+                            <span className="cu-dash" title="Add a wallet first">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-        {!loading && !error && customers.length > 0 && (
-          <div
-            className="table-scroll"
-            style={{
-              background: 'rgba(255,255,255,0.96)',
-              border: '1px solid rgba(1,87,111,0.06)',
-              borderRadius: 20,
-              boxShadow: '0 2px 20px rgba(13, 79, 176, 0.08)',
-              overflowY: 'hidden',
-            }}
-          >
-            <table style={{ width: '100%', minWidth: 980, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif' }}>
-              <thead>
-                <tr style={{ background: '#F3F7FD', textAlign: 'left' }}>
-                  {['Customer', 'PAN', 'Mobile', 'Email', 'Store', 'Wallet', 'Transfer', 'Payout Charges', 'Actions', 'Reports'].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        padding: '14px 20px',
-                        fontSize: 11,
-                        letterSpacing: '1px',
-                        textTransform: 'uppercase',
-                        color: '#7C8491',
-                        fontWeight: 700,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((c) => {
-                  const id = getCustomerId(c);
-                  return (
-                    <tr key={id} style={{ borderTop: '1px solid rgba(1,87,111,0.06)' }}>
-                      <td style={{ padding: '12px 20px', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <Avatar name={c.FULL_NAME} size={32} />
-                          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.3 }}>
-                            <span style={{ color: '#0D4FB0', fontWeight: 600 }}>{c.FULL_NAME}</span>
-                            {c.roleName && (
-                              <span style={{ color: '#9CA3AF', fontWeight: 500, fontSize: 12.5 }}>({c.roleName})</span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '14px 20px', color: '#4A5568' }}>{c.PAN}</td>
-                      <td style={{ padding: '14px 20px', color: '#4A5568', whiteSpace: 'nowrap' }}>+91 {c.MOBILE_NUMBER}</td>
-                      <td style={{ padding: '14px 20px', color: '#4A5568' }}>{c.EMAIL_ID}</td>
-                      <td style={{ padding: '14px 20px', color: '#4A5568' }}>{c.STORE_NAME}</td>
-                      <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
-                        {c.username ? (
-                          <span style={{ color: '#0D4FB0', fontWeight: 700 }}>
-                            ₹{Number(walletBalances[id] ?? c.lastBalance ?? 0).toFixed(4)}
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn-primary"
-                            onClick={() => handleAddWallet(id)}
-                            disabled={walletBusyId === id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              background: '#FFF5EB',
-                              border: 'none',
-                              borderRadius: 8,
-                              cursor: walletBusyId === id ? 'default' : 'pointer',
-                              color: '#F26A1B',
-                              fontFamily: 'Inter, sans-serif',
-                              fontWeight: 700,
-                              fontSize: 12.5,
-                              padding: '7px 12px',
-                              opacity: walletBusyId === id ? 0.6 : 1,
-                            }}
-                          >
-                            <Wallet size={13} /> {walletBusyId === id ? 'Adding…' : 'Add'}
-                          </button>
-                        )}
-                      </td>
-                      <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
-                        {c.username ? (
-                          <button
-                            type="button"
-                            className="btn-primary"
-                            onClick={() => openTransfer(c)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 6,
-                              background: '#F3F7FD', border: '1px solid rgba(1,87,111,0.1)', borderRadius: 8,
-                              cursor: 'pointer', color: '#0D4FB0', fontFamily: 'Inter, sans-serif', fontWeight: 700,
-                              fontSize: 12.5, padding: '7px 12px',
-                            }}
-                          >
-                            <ArrowRightLeft size={13} /> Transfer
-                          </button>
-                        ) : (
-                          <span style={{ color: '#9CA3AF' }}>—</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
-                        {!c.username ? (
-                          <span style={{ color: '#9CA3AF' }}>—</span>
-                        ) : editingPayoutId === id ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              autoFocus
-                              value={payoutInput}
-                              onChange={(e) => setPayoutInput(e.target.value.replace(/[^0-9.]/g, ''))}
-                              style={{
-                                width: 80,
-                                padding: '6px 8px',
-                                borderRadius: 8,
-                                border: '1px solid rgba(1,87,111,0.15)',
-                                fontFamily: 'Inter, sans-serif',
-                                fontSize: 13,
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="icon-btn-anim"
-                              title="Save"
-                              onClick={() => handleSavePayout(id)}
-                              disabled={payoutBusyId === id}
-                              style={iconBtnStyle}
-                            >
-                              <Check size={16} color="#38A169" />
-                            </button>
-                            <button
-                              type="button"
-                              className="icon-btn-anim"
-                              title="Cancel"
-                              onClick={cancelEditPayout}
-                              disabled={payoutBusyId === id}
-                              style={iconBtnStyle}
-                            >
-                              <X size={16} color="#7C8491" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ color: '#0D4FB0', fontWeight: 700 }}>
-                              {payoutCharges[id] !== undefined ? `₹${Number(payoutCharges[id]).toFixed(4)}` : '…'}
-                            </span>
-                            <button
-                              type="button"
-                              className="icon-btn-anim"
-                              title="Edit payout charges"
-                              onClick={() => startEditPayout(id)}
-                              style={iconBtnStyle}
-                            >
-                              <Pencil size={14} color="#F26A1B" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            type="button"
-                            className="icon-btn-anim"
-                            title="View"
-                            onClick={() => onNavigate?.('customerDetail', { customerId: id, mode: 'view' })}
-                            style={iconBtnStyle}
-                          >
-                            <Eye size={16} color="#4A5568" />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn-anim"
-                            title="Edit"
-                            onClick={() => onNavigate?.('customerDetail', { customerId: id, mode: 'edit' })}
-                            style={iconBtnStyle}
-                          >
-                            <Pencil size={16} color="#F26A1B" />
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn-anim"
-                            title="Delete"
-                            onClick={() => confirmDelete(c)}
-                            style={iconBtnStyle}
-                          >
-                            <Trash2 size={16} color="#E53E3E" />
-                          </button>
-                        </div>
-                      </td>
-                      <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
-                        {c.username ? (
-                          <button
-                            type="button"
-                            className="icon-btn-anim"
-                            aria-haspopup="menu"
-                            aria-expanded={reportMenu?.customer === c}
-                            onClick={(e) => (reportMenu?.customer === c ? setReportMenu(null) : openReportMenu(e, c))}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 9, cursor: 'pointer',
-                              border: '1px solid rgba(1,87,111,0.1)', background: '#F3F7FD', color: '#12284A',
-                              fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 12.5,
-                            }}
-                          >
-                            <FileChartColumn size={14} /> Reports <ChevronDown size={13} />
-                          </button>
-                        ) : (
-                          <span style={{ color: '#9CA3AF' }} title="Add a wallet first">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            {/* Footer: how many, and paging when there is more than one page */}
+            <div className="cu-foot">
+              <span>
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
+                {filtered.length !== customers.length ? ` (filtered from ${customers.length})` : ''}
+              </span>
+              {pageCount > 1 && (
+                <div className="cu-pager">
+                  <button type="button" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1} aria-label="Previous page">
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span>Page {currentPage} of {pageCount}</span>
+                  <button type="button" onClick={() => setPage(currentPage + 1)} disabled={currentPage === pageCount} aria-label="Next page">
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

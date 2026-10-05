@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using TamilPay.Api.Models;
 using TamilPay.Api.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,7 @@ namespace TamilPay.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class QrController(RemoteApiClient remoteApi) : ControllerBase
+public class QrController(RemoteApiClient remoteApi, WalletOwnerDirectory walletOwners) : ControllerBase
 {
     // clientId comes from the logged-in user (MASTER_CLIENT_ID), never hardcoded.
     //
@@ -148,7 +149,7 @@ public class QrController(RemoteApiClient remoteApi) : ControllerBase
         if (!result.IsSuccess)
             return Problem(result.Message, statusCode: StatusCodes.Status502BadGateway);
 
-        return Ok(result.Data ?? []);
+        return Ok(await WithShopAsync(result.Data));
     }
 
     /// <summary>Every QR collect request awaiting admin approval — Admin > QR Requests'
@@ -164,7 +165,28 @@ public class QrController(RemoteApiClient remoteApi) : ControllerBase
         if (!result.IsSuccess)
             return Problem(result.Message, statusCode: StatusCodes.Status502BadGateway);
 
-        return Ok(result.Data ?? []);
+        return Ok(await WithShopAsync(result.Data));
+    }
+
+    /// <summary>
+    /// The remote names the retailer on a QR request but not their shop. Each row gets a
+    /// "storeName" from the wallet's owner, so whoever approves can see which shop is asking.
+    /// A wallet that cannot be matched simply has no storeName.
+    /// </summary>
+    private async Task<List<JsonNode?>> WithShopAsync(List<JsonElement>? rows)
+    {
+        var list = new List<JsonNode?>();
+        if (rows is not { Count: > 0 }) return list;
+
+        var owners = await walletOwners.GetAsync();
+        foreach (var row in rows)
+        {
+            var node = JsonNode.Parse(row.GetRawText());
+            if (node is JsonObject obj && obj["walletId"]?.GetValue<int>() is { } walletId && owners.TryGetValue(walletId, out var owner))
+                obj["storeName"] = owner.Store;
+            list.Add(node);
+        }
+        return list;
     }
 
     [HttpPost("approve")]

@@ -12,6 +12,7 @@ builder.Services.AddHttpClient("RemoteApi", client =>
     client.Timeout = TimeSpan.FromSeconds(20);
 });
 builder.Services.AddScoped<RemoteApiClient>();
+builder.Services.AddScoped<WalletOwnerDirectory>();
 
 // The BBPS service is separate from the clients API; its full URL comes from Bbps:BillersUrl.
 builder.Services.AddHttpClient("Bbps", client => client.Timeout = TimeSpan.FromSeconds(30));

@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, WalletCards, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { apiUrl } from '../utils/api';
+import SearchSelect from '../components/SearchSelect';
 import { loadImageAsDataUrl } from '../utils/pdf';
 import { MASTER_CLIENT_ID } from '../utils/customer';
 import { pick } from '../utils/pick';
@@ -431,7 +432,10 @@ const StatusBadge = ({ status }) => {
 /** Reports menu ('menu' step), each report keyed by buildReports() above, sharing one date-ranged view with PDF/CSV export. */
 const ReportsPage = ({ onNavigate, user, navParams }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
-  const REPORTS = buildReports(isAdmin);
+  // Built once per role, not per render: a fresh object every render made `report` look new to
+  // every effect that depends on it, which re-ran them endlessly (the customer list was being
+  // refetched in a loop — thousands of requests).
+  const REPORTS = useMemo(() => buildReports(isAdmin), [isAdmin]);
   // Opened from a row's Reports menu on the Customers page: every wallet-based report is
   // then that one customer's — their wallet instead of the signed-in user's.
   const scopedCustomer = navParams?.customer ?? null;
@@ -453,6 +457,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
   const [customerWalletId, setCustomerWalletId] = useState('');
 
   const report = REPORTS[step];
+  const needsCustomer = Boolean(report?.needsCustomer);
 
   // Narrows the rows already loaded — no extra request, every report offers it. A row
   // matches when the text is in any of its columns (what the exports carry, formatted as
@@ -506,14 +511,14 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
   }, [step]);
 
   useEffect(() => {
-    if (!report?.needsCustomer) return;
+    if (!needsCustomer) return;
     setCustomersLoading(true);
     fetch(apiUrl(`/api/customers/retailers?clientId=${MASTER_CLIENT_ID}`))
       .then((res) => (res.ok ? res.json() : []))
       .then((list) => setCustomers([...list].sort((a, b) => String(a.fullName).localeCompare(String(b.fullName)))))
       .catch(() => setCustomers([]))
       .finally(() => setCustomersLoading(false));
-  }, [report]);
+  }, [needsCustomer]);
 
   const openReport = (key) => {
     setCustomerWalletId('');
@@ -846,18 +851,14 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                   <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
                     Select Customer
                   </label>
-                  <select
-                    className="form-input no-icon" value={customerWalletId}
-                    onChange={(e) => { setCustomerWalletId(e.target.value); setRows([]); }}
-                    style={{ padding: '6px 12px', fontSize: 13, height: 34, minWidth: 220 }}
-                  >
-                    <option value="">{customersLoading ? 'Loading customers…' : 'Select customer'}</option>
-                    {customers.map((c) => (
-                      <option key={c.walletId} value={c.walletId}>
-                        {c.fullName}{c.storeName ? ` — ${c.storeName}` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchSelect
+                    options={customers.map((c) => ({ value: c.walletId, label: c.fullName, hint: c.storeName }))}
+                    value={customerWalletId}
+                    onChange={(id) => { setCustomerWalletId(id); setRows([]); }}
+                    loading={customersLoading}
+                    placeholder="Type a customer name or store"
+                    emptyText="No customer matches."
+                  />
                 </div>
               )}
               <div>
