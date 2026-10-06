@@ -3464,3 +3464,90 @@ body {
 .cu-email { display: block; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #4A5568; }
 .cu-store { max-width: 190px; }
 .cu-actions { justify-content: flex-start; gap: 2px; }
+
+/* ===================== DATE PICKER =====================
+   A standard calendar popover instead of the browser's date field: the "October 2026" title opens
+   a month grid, whose year opens a year list; day cells are round, neighbouring-month days fade,
+   and Today is a full-width button. A Quick range menu sets From and To together. */
+.df-label { display: block; margin-bottom: 4px; font: 600 10px 'Inter', sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: #7C8491; text-align: left; }
+
+.df-trigger {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 156px; height: 46px; padding: 0 14px;
+  border: 1.5px solid #E4E9F2; border-radius: 12px; background: #fff; color: #0D4FB0; cursor: pointer;
+  font: 600 15px 'Inter', sans-serif; text-align: left; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.df-trigger--compact { height: 34px; padding: 0 12px; min-width: 150px; font-size: 13px; }
+.df-trigger:hover:not(:disabled) { border-color: #B9CCEE; }
+.df-trigger:focus-visible, .df-trigger[aria-expanded="true"] { outline: none; border-color: var(--tp-blue); box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.12); }
+.df-trigger.is-empty { color: #9AA3B2; font-weight: 500; }
+.df-trigger svg { flex-shrink: 0; color: #5B6577; }
+.df-trigger:disabled { opacity: 0.6; cursor: default; }
+.df-required { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.df-quick {
+  height: 34px; min-width: 130px; padding: 0 30px 0 12px; border: 1.5px solid #E4E9F2; border-radius: 12px; background-color: #fff; color: #0D4FB0;
+  font: 600 13px 'Inter', sans-serif; cursor: pointer;
+}
+.df-quick:focus-visible { outline: none; border-color: var(--tp-blue); box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.12); }
+
+/* The popover */
+.df-pop {
+  position: fixed; z-index: 1200; padding: 16px; background: #fff; border: 1px solid #E8ECF3; border-radius: 18px;
+  box-shadow: 0 28px 56px -20px rgba(13, 79, 176, 0.4), 0 6px 18px rgba(17, 24, 39, 0.1);
+  font-family: 'Inter', sans-serif; text-align: left; animation: df-in 0.14s ease-out;
+}
+@keyframes df-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+.df-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.df-head--center { justify-content: center; }
+.df-nav {
+  flex-shrink: 0; display: grid; place-items: center; width: 34px; height: 34px; border: none; border-radius: 50%;
+  background: none; color: #374151; cursor: pointer; transition: background 0.12s;
+}
+.df-nav:hover:not(:disabled) { background: #EEF3FD; color: var(--tp-blue-deep); }
+.df-nav:disabled { color: #CBD2DE; cursor: default; }
+.df-nav svg { color: inherit; }
+.df-title {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: none; border-radius: 10px; background: none; cursor: pointer;
+  font: 700 15px 'Inter', sans-serif; color: #111827; transition: background 0.12s;
+}
+.df-title:hover { background: #EEF3FD; }
+.df-title svg { color: #6B7587; }
+.df-title--plain { cursor: default; }
+.df-title--plain:hover { background: none; }
+
+/* Days */
+.df-weekdays, .df-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.df-weekdays { margin-bottom: 4px; }
+.df-weekdays span { padding: 6px 0; text-align: center; font-size: 12px; font-weight: 600; color: #8A93A4; }
+.df-grid { row-gap: 2px; }
+.df-day {
+  position: relative; display: grid; place-items: center; width: 38px; height: 38px; margin: 0 auto; border: none; border-radius: 50%;
+  background: none; color: #1F2937; font: 500 14px 'Inter', sans-serif; cursor: pointer; transition: background 0.1s, color 0.1s;
+}
+.df-day:hover:not(:disabled):not(.is-selected) { background: #EAF2FE; color: var(--tp-blue-deep); }
+.df-day:focus-visible { outline: 2px solid var(--tp-blue); outline-offset: 1px; }
+.df-day.is-outside { color: #A8B0BE; }
+.df-day:disabled { color: #CBD2DE; cursor: default; }
+.df-day.is-today:not(.is-selected) { color: #C24E0C; font-weight: 700; background: #FEF1E8; }
+.df-day.is-selected { background: var(--tp-blue); color: #fff; font-weight: 700; box-shadow: 0 6px 14px -6px rgba(21, 101, 216, 0.7); }
+
+/* Months and years */
+.df-months { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+.df-month, .df-year {
+  height: 44px; border: none; border-radius: 12px; background: #F6F8FC; color: #1F2937; font: 600 14px 'Inter', sans-serif; cursor: pointer;
+  transition: background 0.12s;
+}
+.df-month:hover:not(:disabled):not(.is-selected), .df-year:hover:not(.is-selected) { background: #E6EEFB; color: var(--tp-blue-deep); }
+.df-month:disabled { color: #CBD2DE; background: #FAFBFD; cursor: default; }
+.df-month.is-selected, .df-year.is-selected { background: var(--tp-blue); color: #fff; }
+.df-years { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 248px; overflow-y: auto; padding: 2px; margin-bottom: 4px; }
+.df-year { height: 40px; }
+
+/* Footer button */
+.df-today {
+  width: 100%; height: 40px; margin-top: 12px; border: none; border-radius: 12px; background: #EEF3FD; color: var(--tp-blue-deep);
+  font: 700 14px 'Inter', sans-serif; cursor: pointer; transition: background 0.12s;
+}
+.df-today:hover:not(:disabled) { background: #DFE9FB; }
+.df-today:disabled { color: #B0B8C4; background: #F6F8FC; cursor: default; }

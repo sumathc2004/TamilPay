@@ -19,6 +19,8 @@ public class AdminImpsReportRow
     public string? CustomerName { get; set; }
     /// <summary>Not from the remote — filled in from the wallet's owner (see AdminController).</summary>
     public string? RetailerMobile { get; set; }
+    /// <summary>Not from the remote — the wallet owner's shop (see AdminController).</summary>
+    public string? StoreName { get; set; }
     public decimal Amount { get; set; }
     public string? Utr { get; set; }
     public string Status { get; set; } = string.Empty;

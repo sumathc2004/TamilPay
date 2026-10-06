@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, RefreshCw, WalletCards, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { apiUrl } from '../utils/api';
+import DateRangeFields from '../components/DateRangeFields';
 import SearchSelect from '../components/SearchSelect';
 import { loadImageAsDataUrl } from '../utils/pdf';
 import { MASTER_CLIENT_ID } from '../utils/customer';
@@ -85,6 +86,17 @@ const ledgerReport = {
 // Profit columns are internal margin data (what TamilPay pays the PG partner and keeps
 // as profit on each link), so only Admin logins see them; Retailers get the same rows
 // without those two columns.
+// A payment link the report still calls PENDING may already have been decided at the bank, or
+// never started. Pg/CheckStatus (through our /api/pg/status, which returns only the outcome,
+// amount, UTR and card) asks the bank, using the payment's reference number.
+const isPgPending = (r) => r.status === 'PENDING' && Boolean(r.pipeRefNumber);
+const checkPgStatus = async (r) => {
+  const res = await fetch(apiUrl(`/api/pg/status?referenceId=${encodeURIComponent(r.pipeRefNumber)}`));
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.message ?? `Could not check the payment (${res.status})`);
+  return body;
+};
+
 const buildReports = (isAdmin) => ({
   transfer: {
     label: 'Transfer Reports',
@@ -141,6 +153,8 @@ const buildReports = (isAdmin) => ({
     resolveWalletId: (u) => ((u?.roleName || '').toLowerCase() === 'admin' ? 0 : u?.walletId),
     fetchUrl: ({ clientId, walletId, fromDate, toDate }) =>
       apiUrl(`/api/pg/transfer-report?clientId=${clientId}&walletId=${walletId}&fromDate=${fromDate}&toDate=${toDate}`),
+    isPending: isPgPending,
+    checkRow: checkPgStatus,
     headers: [
       'ID', 'Time', 'PG', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges',
       ...(isAdmin ? ['Partner Charges', 'Profit'] : []),
@@ -191,7 +205,7 @@ const buildReports = (isAdmin) => ({
     statusOptions: ['SUCCESS', 'FAILED', 'PENDING'],
     fetchUrl: ({ walletId, fromDate, toDate, status }) =>
       apiUrl(`/api/bbps/report?walletId=${walletId}&fromDate=${fromDate}&toDate=${toDate}${status ? `&status=${status}` : ''}`),
-    headers: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Consumer Name', 'Card Number'],
+    headers: ['ID', 'Time', ...(isAdmin ? ['Retailer', 'Shop'] : []), 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Consumer Name', 'Card Number'],
     cells: (r) => [
       r.Id,
       new Date(r.createdTime).toLocaleString(),
@@ -200,6 +214,7 @@ const buildReports = (isAdmin) => ({
           <div style={{ fontWeight: 600 }}>{r.retailerName || '—'}</div>
           <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.MOBILE_NUMBER || r.username || ''}</div>
         </div>,
+        r.storeName || '—',
       ] : []),
       <span key="amount" style={{ fontWeight: 700 }}>{money(r.Amount)}</span>,
       money(r.charges),
@@ -211,17 +226,17 @@ const buildReports = (isAdmin) => ({
     ],
     exportRow: (r) => [
       r.Id, new Date(r.createdTime).toLocaleString(),
-      ...(isAdmin ? [r.retailerName || ''] : []),
+      ...(isAdmin ? [r.retailerName || '', r.storeName || ''] : []),
       Number(r.Amount).toFixed(2), Number(r.charges).toFixed(2), Number(r.closingbalance).toFixed(2),
       r.npciRef || '', r.status,
       pick(r, ['ConsumerName', 'consumerName', 'customerName', 'CustomerName']) || '',
       pick(r, ['cardNumber', 'CardNumber', 'card_number']) || '',
     ],
-    exportHeaders: ['ID', 'Time', ...(isAdmin ? ['Retailer'] : []), 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Consumer Name', 'Card Number'],
-    exportWidths: [0.4, 1.3, ...(isAdmin ? [1.1] : []), 0.8, 0.7, 1, 1.6, 0.8, 1.3, 1.2],
-    exportAligns: ['left', 'left', ...(isAdmin ? ['left'] : []), 'right', 'right', 'right', 'left', 'left', 'left', 'left'],
+    exportHeaders: ['ID', 'Time', ...(isAdmin ? ['Retailer', 'Shop'] : []), 'Amount', 'Charges', 'Closing Balance', 'NPCI Ref', 'Status', 'Consumer Name', 'Card Number'],
+    exportWidths: [0.4, 1.3, ...(isAdmin ? [1.1, 1.3] : []), 0.8, 0.7, 1, 1.6, 0.8, 1.3, 1.2],
+    exportAligns: ['left', 'left', ...(isAdmin ? ['left', 'left'] : []), 'right', 'right', 'right', 'left', 'left', 'left', 'left'],
     // Search finds a payment by its NPCI reference or, for admins, the retailer.
-    searchText: (r) => [r.npciRef, r.retailerName, r.MOBILE_NUMBER],
+    searchText: (r) => [r.npciRef, r.retailerName, r.MOBILE_NUMBER, r.storeName],
     receipt: (r) => ({
       title: r.txntype === 'CREDIT' ? 'Credit Card Payment Refund' : 'Credit Card Payment Receipt',
       status: r.status,
@@ -229,6 +244,7 @@ const buildReports = (isAdmin) => ({
         ['Transaction ID', r.Id],
         ['Date & Time', new Date(r.createdTime).toLocaleString()],
         ...(r.retailerName ? [['Retailer', r.retailerName]] : []),
+        ...(r.storeName ? [['Shop', r.storeName]] : []),
         ['Consumer Name', pick(r, ['ConsumerName', 'consumerName', 'customerName', 'CustomerName']) || '—'],
         ['Card Number', pick(r, ['cardNumber', 'CardNumber', 'card_number']) || '—'],
         ['Amount', money(r.Amount)],
@@ -297,7 +313,7 @@ const buildReports = (isAdmin) => ({
       icon: ArrowLeftRight,
       noWalletRequired: true,
       fetchUrl: ({ clientId, fromDate, toDate }) => apiUrl(`/api/admin/imps-report?clientId=${clientId}&fromDate=${fromDate}&toDate=${toDate}`),
-      headers: ['ID', 'Time', 'Retailer', 'Account', 'Amount', 'UTR', 'Status'],
+      headers: ['ID', 'Time', 'Retailer', 'Shop', 'Account', 'Amount', 'UTR', 'Status'],
       cells: (r) => [
         r.id,
         new Date(r.createdTime).toLocaleString(),
@@ -305,6 +321,7 @@ const buildReports = (isAdmin) => ({
           <div style={{ fontWeight: 600 }}>{r.customerName || `Wallet #${r.walletId}`}</div>
           <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.retailerMobile || ''}</div>
         </div>,
+        r.storeName || '—',
         <div key="account">
           <div style={{ fontWeight: 600 }}>{r.accountHolderName}</div>
           <div style={{ color: '#9CA3AF', fontSize: 12 }}>{r.accountNumber} · {r.ifsc}</div>
@@ -314,12 +331,12 @@ const buildReports = (isAdmin) => ({
         <StatusBadge key="status" status={r.status} />,
       ],
       exportRow: (r) => [
-        r.id, new Date(r.createdTime).toLocaleString(), r.customerName || `Wallet #${r.walletId}`, r.retailerMobile || '',
+        r.id, new Date(r.createdTime).toLocaleString(), r.customerName || `Wallet #${r.walletId}`, r.retailerMobile || '', r.storeName || '',
         r.accountHolderName, r.accountNumber, r.ifsc, Number(r.amount).toFixed(2), r.utr || '', r.status,
       ],
-      exportHeaders: ['ID', 'Time', 'Retailer', 'Retailer Mobile', 'Account Holder', 'Account Number', 'IFSC', 'Amount', 'UTR', 'Status'],
-      exportWidths: [0.35, 1.3, 1.1, 1, 1.4, 1.4, 1, 0.9, 1.1, 0.8],
-      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'left', 'left'],
+      exportHeaders: ['ID', 'Time', 'Retailer', 'Retailer Mobile', 'Shop', 'Account Holder', 'Account Number', 'IFSC', 'Amount', 'UTR', 'Status'],
+      exportWidths: [0.35, 1.3, 1.1, 1, 1.2, 1.4, 1.4, 1, 0.9, 1.1, 0.8],
+      exportAligns: ['left', 'left', 'left', 'left', 'left', 'left', 'left', 'left', 'right', 'left', 'left'],
     },
     // Every retailer's PG links, client-wide — same shape as the "PG Reports" entry
     // above, just unscoped (retailerName instead of customerName, no walletId at all).
@@ -365,6 +382,8 @@ const buildReports = (isAdmin) => ({
       description: 'Every retailer\'s PG links, client-wide',
       icon: CreditCard,
       noWalletRequired: true,
+      isPending: isPgPending,
+      checkRow: checkPgStatus,
       fetchUrl: ({ clientId, fromDate, toDate }) => apiUrl(`/api/admin/pg-report?clientId=${clientId}&fromDate=${fromDate}&toDate=${toDate}`),
       headers: ['ID', 'Time', 'PG', 'Retailer', 'Customer', 'Card', 'Amount', 'Charges', 'Partner Charges', 'Profit', 'Status', 'Credited', 'Closing Balance'],
       cells: (r) => [
@@ -463,6 +482,9 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
   // matches when the text is in any of its columns (what the exports carry, formatted as
   // shown) or in a report's extra searchable fields; the table and both exports use the
   // narrowed list, so what you export is what you are looking at.
+  // The refresh column exists only for reports with a notion of "pending", and only while at
+  // least one visible row is pending.
+  const showRefresh = Boolean(report?.isPending) && rows.some((r) => report.isPending(r));
   const needle = query.trim().toLowerCase();
   const visibleRows = needle && report
     ? rows.filter((r) => [...report.exportRow(r), ...(report.searchText?.(r) ?? [])]
@@ -479,6 +501,24 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
       .catch(() => setStoreDetails(null));
   }, [user]);
 
+  // Reads the report's rows for the chosen filters. Used by Search (with a loading state) and by
+  // a pending row's refresh button (silently, so the table does not blank out).
+  const loadRows = useCallback(() => {
+    const walletId = scopedCustomer ? scopedCustomer.walletId : report.needsCustomer ? customerWalletId : report.resolveWalletId ? report.resolveWalletId(user) : user.walletId;
+    return fetch(report.fetchUrl({ clientId: MASTER_CLIENT_ID, walletId, fromDate, toDate, status: statusFilter }))
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!report.clientDateFilter) return data;
+        // Whole days, local time: from 00:00 of the first day to just before the day after the last.
+        const start = new Date(`${fromDate}T00:00:00`).getTime();
+        const end = new Date(`${toDate}T00:00:00`).getTime() + 86400000;
+        return data.filter((r) => { const t = new Date(r.createdTime).getTime(); return t >= start && t < end; });
+      });
+  }, [user, fromDate, toDate, report, statusFilter, customerWalletId, scopedCustomer]);
+
   const fetchReport = useCallback(() => {
     // Admin IMPS Report is client-wide, not scoped to the logged-in admin's own
     // wallet — the only report that doesn't need a walletId to make sense at all.
@@ -486,22 +526,37 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     if (report.needsCustomer && !customerWalletId) return;
     setLoading(true);
     setError(null);
-    const walletId = scopedCustomer ? scopedCustomer.walletId : report.needsCustomer ? customerWalletId : report.resolveWalletId ? report.resolveWalletId(user) : user.walletId;
-    fetch(report.fetchUrl({ clientId: MASTER_CLIENT_ID, walletId, fromDate, toDate, status: statusFilter }))
-      .then((res) => {
-        if (!res.ok) throw new Error(`Request failed (${res.status})`);
-        return res.json();
-      })
-      .then((data) => {
-        if (!report.clientDateFilter) return setRows(data);
-        // Whole days, local time: from 00:00 of the first day to just before the day after the last.
-        const start = new Date(`${fromDate}T00:00:00`).getTime();
-        const end = new Date(`${toDate}T00:00:00`).getTime() + 86400000;
-        setRows(data.filter((r) => { const t = new Date(r.createdTime).getTime(); return t >= start && t < end; }));
-      })
+    loadRows()
+      .then(setRows)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [user, fromDate, toDate, report, statusFilter, customerWalletId, scopedCustomer]);
+  }, [user, report, customerWalletId, scopedCustomer, loadRows]);
+
+  // A pending row's refresh: ask the bank about that one payment (report.checkRow), re-read the
+  // report in case the server has moved on, and say what the bank answered. The server's report
+  // can lag behind the bank (a payment the bank has declined may still read PENDING there), so
+  // when the bank has given a final answer and the row is still PENDING, the row shows that
+  // answer instead.
+  const [refreshingId, setRefreshingId] = useState(null);
+  const [refreshNote, setRefreshNote] = useState(null);
+  const refreshRow = async (row) => {
+    setRefreshingId(row.id);
+    setRefreshNote(null);
+    try {
+      const check = await report.checkRow(row);
+      const fresh = await loadRows();
+      const decided = check?.outcome === 'success' || check?.outcome === 'failed';
+      setRows(fresh.map((x) => (x.id === row.id && report.isPending(x) && decided
+        ? { ...x, status: check.outcome.toUpperCase() }
+        : x)));
+      setRefreshNote(`#${row.id}: ${check?.message ?? 'Checked.'}${check?.outcome === 'success' && check.utr ? ` UTR ${check.utr}.` : ''}`);
+    } catch (err) {
+      setRefreshNote(`Couldn't refresh: ${err.message}`);
+    } finally {
+      setRefreshingId(null);
+      setTimeout(() => setRefreshNote(null), 6000);
+    }
+  };
 
   useEffect(() => {
     if (report) fetchReport();
@@ -524,6 +579,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     setCustomerWalletId('');
     setRows([]);
     setQuery('');
+    setRefreshNote(null);
     setStatusFilter('');
     setError(null);
     setFromDate(todayIso());
@@ -532,17 +588,31 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
   };
 
   const exportCsv = () => {
-    const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    // A cell that starts with = + - @ is run as a formula when Excel opens the file, and report
+    // cells carry free text (remarks, names). Such text gets a leading apostrophe so it stays
+    // text; real numbers (including negative balances) are left alone.
+    const safe = (v) => {
+      const text = String(v ?? '');
+      return /^[=+\-@\t\r]/.test(text) && Number.isNaN(Number(text)) ? `'${text}` : text;
+    };
+    const escape = (v) => `"${safe(v).replace(/"/g, '""')}"`;
     const lines = visibleRows.map((r) => report.exportRow(r).map(escape).join(','));
-    const csv = [report.exportHeaders.map(escape).join(','), ...lines].join('\n');
+    // The BOM tells Excel the file is UTF-8, so ₹ and Tamil names open correctly; CRLF is the
+    // line break Excel expects.
+    const csv = `﻿${[report.exportHeaders.map(escape).join(','), ...lines].join('\r\n')}`;
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `${step}-report-${fromDate}-to-${toDate}.csv`;
+    link.style.display = 'none';
+    // Attached while clicked, and the address kept alive a moment: some browsers drop the
+    // download if the link is detached or the address is revoked straight away.
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   };
 
   const exportPdf = async () => {
@@ -861,26 +931,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                   />
                 </div>
               )}
-              <div>
-                <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
-                  From
-                </label>
-                <input
-                  type="date" className="form-input no-icon" value={fromDate} max={toDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  style={{ padding: '8px 12px', fontSize: 13, height: 34 }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
-                  To
-                </label>
-                <input
-                  type="date" className="form-input no-icon" value={toDate} min={fromDate} max={todayIso()}
-                  onChange={(e) => setToDate(e.target.value)}
-                  style={{ padding: '8px 12px', fontSize: 13, height: 34 }}
-                />
-              </div>
+              <DateRangeFields fromDate={fromDate} toDate={toDate} onFromChange={setFromDate} onToChange={setToDate} />
               {/* Reports whose API filters by status offer it here; applied on Search. */}
               {report.statusOptions && (
                 <div>
@@ -922,6 +973,11 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                 </div>
             </div>
 
+            {refreshNote && (
+              <p role="status" style={{ margin: "0 0 10px", padding: "9px 12px", borderRadius: 10, background: "#FFF5EB", color: "#C24E0C", fontFamily: "Inter, sans-serif", fontSize: 13, fontWeight: 600, textAlign: "left" }}>
+                {refreshNote}
+              </p>
+            )}
             {loading && <p style={{ fontFamily: 'Inter, sans-serif', color: '#7C8491' }}>Loading…</p>}
             {!loading && error && <p style={{ fontFamily: 'Inter, sans-serif', color: '#E53E3E' }}>Couldn't load report: {error}</p>}
             {!loading && !error && rows.length === 0 && (
@@ -970,6 +1026,17 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                           Actions
                         </th>
                       )}
+                      {showRefresh && (
+                        <th
+                          style={{
+                            position: 'sticky', top: 0, zIndex: 1, background: '#F3F7FD',
+                            padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase',
+                            color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Refresh
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -998,6 +1065,20 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                                 <Icon size={14} color="var(--theme-heading)" />
                               </button>
                             ))}
+                          </td>
+                        )}
+                        {showRefresh && (
+                          <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
+                            {/* Only a pending payment has anything left to check. */}
+                            {report.isPending(r) && (
+                              <button
+                                type="button" title="Check this payment with the bank" aria-label={`Check payment ${r.id}`}
+                                className="icon-btn-anim" onClick={() => refreshRow(r)} disabled={refreshingId === r.id}
+                                style={{ background: '#FFF5EB', border: '1px solid #FBDDC8', borderRadius: 8, cursor: refreshingId === r.id ? 'default' : 'pointer', padding: 6, lineHeight: 0 }}
+                              >
+                                <RefreshCw size={14} color="#F26A1B" className={refreshingId === r.id ? 'pgs-spin' : ''} />
+                              </button>
+                            )}
                           </td>
                         )}
                       </tr>

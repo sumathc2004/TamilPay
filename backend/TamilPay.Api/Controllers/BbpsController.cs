@@ -16,7 +16,8 @@ namespace TamilPay.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class BbpsController(
-    IHttpClientFactory httpClientFactory, IConfiguration configuration, IMemoryCache cache, RemoteApiClient remoteApi) : ControllerBase
+    IHttpClientFactory httpClientFactory, IConfiguration configuration, IMemoryCache cache, RemoteApiClient remoteApi,
+    WalletOwnerDirectory walletOwners) : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -216,7 +217,7 @@ public class BbpsController(
         if (!result.IsSuccess)
             return Problem(result.Message, statusCode: StatusCodes.Status502BadGateway);
 
-        return Ok(result.Data ?? []);
+        return Ok(await walletOwners.WithShopAsync(result.Data));
     }
 
     private static string FetchKey(string reference) => $"bbps-fetch:{reference}";

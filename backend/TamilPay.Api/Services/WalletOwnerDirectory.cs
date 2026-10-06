@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Caching.Memory;
 using TamilPay.Api.Models;
 
@@ -41,5 +43,25 @@ public class WalletOwnerDirectory(RemoteApiClient remoteApi, IMemoryCache cache)
         // Not cached when empty — that would be a failed lookup, not "no retailers".
         if (owners.Count > 0) cache.Set(CacheKey, owners, TimeSpan.FromMinutes(10));
         return owners;
+    }
+
+    /// <summary>
+    /// Adds a "storeName" to each raw report row from its wallet's owner, for remote reports that
+    /// name a retailer but never their shop. A wallet that cannot be matched simply has none.
+    /// </summary>
+    public async Task<List<JsonNode?>> WithShopAsync(List<JsonElement>? rows)
+    {
+        var list = new List<JsonNode?>();
+        if (rows is not { Count: > 0 }) return list;
+
+        var owners = await GetAsync();
+        foreach (var row in rows)
+        {
+            var node = JsonNode.Parse(row.GetRawText());
+            if (node is JsonObject obj && obj["walletId"]?.GetValue<int>() is { } walletId && owners.TryGetValue(walletId, out var owner))
+                obj["storeName"] = owner.Store;
+            list.Add(node);
+        }
+        return list;
     }
 }

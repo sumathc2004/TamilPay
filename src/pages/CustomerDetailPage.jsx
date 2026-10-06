@@ -4,6 +4,8 @@ import { labelStyle, fieldErrorStyle } from '../styles/formStyles';
 import { getCustomerId, MASTER_CLIENT_ID } from '../utils/customer';
 import { apiUrl } from '../utils/api';
 import Avatar from '../components/Avatar';
+import DateField from '../components/DateField';
+import { todayIso } from '../utils/dates';
 import ViewRow from '../components/ViewRow';
 import Modal from '../components/Modal';
 
@@ -415,7 +417,12 @@ const CustomerDetailPage = ({ onNavigate, navParams }) => {
                   </Field>
 
                   <Field label="Date of Birth" error={fieldErrors.dateOfBirth}>
-                    <input type="date" className="form-input no-icon" value={form.dateOfBirth} onChange={updateField('dateOfBirth')} required />
+                    {/* Years back to 1930 and no future dates; the calendar's month and year menus get
+                        to a birth date in two clicks. Empty is caught by validate() on submit. */}
+                    <DateField
+                      value={form.dateOfBirth} onChange={(iso) => setForm((f) => ({ ...f, dateOfBirth: iso }))}
+                      max={todayIso()} minYear={1930} compact={false} placeholder="Select date of birth" aria-label="Date of birth"
+                    />
                   </Field>
 
                   <Field label="Role">

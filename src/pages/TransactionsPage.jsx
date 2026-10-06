@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Receipt } from 'lucide-react';
 import { apiUrl } from '../utils/api';
+import DateRangeFields from '../components/DateRangeFields';
 
 const todayIso = () => {
   const d = new Date();
@@ -88,26 +89,7 @@ const TransactionsPage = ({ user }) => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-            <div>
-              <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
-                From
-              </label>
-              <input
-                type="date" className="form-input no-icon" value={fromDate} max={toDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                style={{ padding: '8px 12px', fontSize: 13, height: 34 }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
-                To
-              </label>
-              <input
-                type="date" className="form-input no-icon" value={toDate} min={fromDate} max={todayIso()}
-                onChange={(e) => setToDate(e.target.value)}
-                style={{ padding: '8px 12px', fontSize: 13, height: 34 }}
-              />
-            </div>
+            <DateRangeFields fromDate={fromDate} toDate={toDate} onFromChange={setFromDate} onToChange={setToDate} />
             <button type="button" onClick={fetchRows} className="signin-btn" style={{ width: 'auto', padding: '0 18px', height: 34, fontSize: 13 }}>
               Search
             </button>

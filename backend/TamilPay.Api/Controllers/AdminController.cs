@@ -44,6 +44,7 @@ public class AdminController(RemoteApiClient remoteApi, WalletOwnerDirectory wal
                 if (!owners.TryGetValue(row.WalletId, out var owner)) continue;
                 if (string.IsNullOrWhiteSpace(row.CustomerName)) row.CustomerName = owner.Name;
                 row.RetailerMobile = owner.Mobile;
+                row.StoreName = owner.Store;
             }
         }
         return Ok(rows);

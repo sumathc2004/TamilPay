@@ -208,10 +208,10 @@ const QrRequestsPage = () => {
 
           {!pendingLoading && !pendingError && pending?.length > 0 && (
             <div className="table-scroll">
-              <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
+              <table style={{ width: '100%', minWidth: 1040, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
                 <thead>
                   <tr style={{ background: '#F3F7FD', textAlign: 'left' }}>
-                    {['ID', 'Time', 'Retailer', 'Shop', 'VPA', 'Amount', 'UTR', ''].map((h) => (
+                    {['ID', 'Time', 'Retailer', 'Shop', 'VPA', 'Amount', 'UTR', 'Remarks', ''].map((h) => (
                       <th key={h} style={{ padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
@@ -239,9 +239,9 @@ const QrRequestsPage = () => {
                           {r.amount != null ? money(r.amount) : '—'}
                           {r.creditAmount != null && <Sub>Credit {money(r.creditAmount)}</Sub>}
                         </td>
-                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
-                          {r.utr ?? '—'}
-                          {r.remarks && <Sub>{r.status === 'REJECTED' ? `Rejected: ${r.remarks}` : r.remarks}</Sub>}
+                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.utr ?? '—'}</td>
+                        <td style={{ padding: '6px 12px', color: r.remarks ? '#374151' : '#B0B8C4', minWidth: 140, maxWidth: 280, wordBreak: 'break-word' }}>
+                          {r.remarks || '—'}
                         </td>
                         <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', gap: 6 }}>
@@ -296,10 +296,10 @@ const QrRequestsPage = () => {
 
           {!reportLoading && !reportError && report?.length > 0 && (
             <div className="table-scroll">
-              <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
+              <table style={{ width: '100%', minWidth: 1040, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
                 <thead>
                   <tr style={{ background: '#F3F7FD', textAlign: 'left' }}>
-                    {['ID', 'Time', 'Retailer', 'Shop', 'VPA', 'Amount', 'UTR', 'Status'].map((h) => (
+                    {['ID', 'Time', 'Retailer', 'Shop', 'VPA', 'Amount', 'UTR', 'Remarks', 'Status'].map((h) => (
                       <th key={h} style={{ padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
@@ -326,9 +326,9 @@ const QrRequestsPage = () => {
                           {r.amount != null ? money(r.amount) : '—'}
                           {r.creditAmount != null && <Sub>Credit {money(r.creditAmount)}</Sub>}
                         </td>
-                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
-                          {r.utr ?? '—'}
-                          {r.remarks && <Sub>{r.status === 'REJECTED' ? `Rejected: ${r.remarks}` : r.remarks}</Sub>}
+                        <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.utr ?? '—'}</td>
+                        <td style={{ padding: '6px 12px', color: r.remarks ? '#374151' : '#B0B8C4', minWidth: 140, maxWidth: 280, wordBreak: 'break-word' }}>
+                          {r.remarks || '—'}
                         </td>
                         <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}><StatusBadge status={r.status} /></td>
                       </tr>
