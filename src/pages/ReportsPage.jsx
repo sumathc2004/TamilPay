@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, RefreshCw, WalletCards, X } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { buildXlsx } from '../utils/xlsx';
 import { apiUrl } from '../utils/api';
 import DateRangeFields from '../components/DateRangeFields';
 import SearchSelect from '../components/SearchSelect';
@@ -587,32 +588,32 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     setStep(key);
   };
 
-  const exportCsv = () => {
-    // A cell that starts with = + - @ is run as a formula when Excel opens the file, and report
-    // cells carry free text (remarks, names). Such text gets a leading apostrophe so it stays
-    // text; real numbers (including negative balances) are left alone.
-    const safe = (v) => {
-      const text = String(v ?? '');
-      return /^[=+\-@\t\r]/.test(text) && Number.isNaN(Number(text)) ? `'${text}` : text;
-    };
-    const escape = (v) => `"${safe(v).replace(/"/g, '""')}"`;
-    const lines = visibleRows.map((r) => report.exportRow(r).map(escape).join(','));
-    // The BOM tells Excel the file is UTF-8, so ₹ and Tamil names open correctly; CRLF is the
-    // line break Excel expects.
-    const csv = `﻿${[report.exportHeaders.map(escape).join(','), ...lines].join('\r\n')}`;
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${step}-report-${fromDate}-to-${toDate}.csv`;
-    link.style.display = 'none';
-    // Attached while clicked, and the address kept alive a moment: some browsers drop the
-    // download if the link is detached or the address is revoked straight away.
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  // A real .xlsx workbook, not a CSV: Excel guesses the type of every CSV cell and turns a
+  // digits-only one into a number (dropping leading zeros and all but 15 digits), which mangled
+  // 21-digit references into 6.1E+19. In a workbook each cell has its own type, so references,
+  // UTRs and account numbers stay exactly as they are. See utils/xlsx.js.
+  const exportExcel = async () => {
+    try {
+      const bytes = await buildXlsx({
+        sheetName: report.label,
+        headers: report.exportHeaders,
+        rows: visibleRows.map((r) => report.exportRow(r)),
+      });
+      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${step}-report-${fromDate}-to-${toDate}.xlsx`;
+      link.style.display = 'none';
+      // Attached while clicked, and the address kept alive a moment: some browsers drop the
+      // download if the link is detached or the address is revoked straight away.
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (err) {
+      window.alert(`Couldn't create the Excel file: ${err.message}`);
+    }
   };
 
   const exportPdf = async () => {
@@ -909,7 +910,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                 <button type="button" className="icon-btn-anim" onClick={exportPdf} disabled={visibleRows.length === 0} style={exportBtnStyle}>
                   <FileText size={14} /> Export PDF
                 </button>
-                <button type="button" className="icon-btn-anim" onClick={exportCsv} disabled={visibleRows.length === 0} style={exportBtnStyle}>
+                <button type="button" className="icon-btn-anim" onClick={exportExcel} disabled={visibleRows.length === 0} style={exportBtnStyle}>
                   <FileSpreadsheet size={14} /> Export Excel
                 </button>
               </div>

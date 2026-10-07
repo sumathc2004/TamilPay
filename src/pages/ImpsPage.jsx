@@ -129,6 +129,7 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [beneficiariesLoading, setBeneficiariesLoading] = useState(false);
   const [beneficiarySearch, setBeneficiarySearch] = useState('');
+  const [accountSearch, setAccountSearch] = useState('');
   const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
   const [transferForm, setTransferForm] = useState(EMPTY_TRANSFER_FORM);
   const [transferFieldErrors, setTransferFieldErrors] = useState({});
@@ -238,6 +239,17 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
       setBeneficiariesLoading(false);
     }
   };
+
+  // The sender's own bank accounts, narrowed by the search box: holder name, account number
+  // (spaces ignored), bank name or IFSC.
+  const filteredBankAccounts = (() => {
+    const q = accountSearch.trim().toLowerCase();
+    if (!q) return bankAccounts;
+    const digits = q.replace(/\s+/g, '');
+    return bankAccounts.filter((a) =>
+      [a.AccountHolderName, a.BankName, a.IFSC].some((v) => String(v ?? '').toLowerCase().includes(q))
+      || String(a.AccountNumber ?? '').replace(/\s+/g, '').includes(digits));
+  })();
 
   const filteredBeneficiaries = beneficiaries.filter((b) => {
     const q = beneficiarySearch.trim().toLowerCase();
@@ -732,6 +744,7 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
     setMobileError(null);
     setSender(null);
     setBankAccounts([]);
+    setAccountSearch('');
     setTransferAccount(null);
     setShowBankForm(false);
     setBeneficiaries([]);
@@ -865,11 +878,34 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
 
             {!showBankForm && (
               bankAccounts.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: 4 }}>
-                  {bankAccounts.map((acc) => (
-                    <BankAccountCard key={acc.id} account={acc} onClick={() => selectTransferAccount(acc)} />
-                  ))}
-                </div>
+                <>
+                  {/* Find an account by the holder's name or the account number (also the bank
+                      or IFSC) — the list can run to dozens of accounts for one sender. */}
+                  <div style={{ position: 'relative', marginBottom: 14 }}>
+                    <Search size={16} color="#B0B8C4" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Search by name or account number…"
+                      aria-label="Search bank accounts"
+                      autoComplete="off"
+                      value={accountSearch}
+                      onChange={(e) => setAccountSearch(e.target.value)}
+                    />
+                  </div>
+
+                  {filteredBankAccounts.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 'calc(100vh - 360px)', overflowY: 'auto', paddingRight: 4 }}>
+                      {filteredBankAccounts.map((acc) => (
+                        <BankAccountCard key={acc.id} account={acc} onClick={() => selectTransferAccount(acc)} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: '#7C8491', margin: 0 }}>
+                      No bank account matches “{accountSearch.trim()}”.
+                    </p>
+                  )}
+                </>
               ) : (
                 <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13.5, color: '#7C8491', margin: 0 }}>
                   No bank account registered for this sender yet.
