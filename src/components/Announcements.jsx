@@ -114,7 +114,6 @@ export const AnnouncementBanner = ({ items, onOpen }) => {
             <i className="an-dot" aria-hidden="true" />
             <strong className="an-pill-title">{a.title}</strong>
             <span className="an-pill-msg">{a.message}</span>
-            {a.createdTime && <time className="an-pill-time">{formatAnnouncementTime(a.createdTime)}</time>}
           </span>
         ))}
         {more > 0 && <span className="an-more">+{more} more</span>}

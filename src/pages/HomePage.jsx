@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import {
   ArrowRight, CreditCard, FileChartColumn, Fingerprint, IdCard,
   QrCode, ScanQrCode, SendHorizontal, Settings,
-  WalletCards, WalletMinimal, X,
+  WalletCards, WalletMinimal, X, Zap,
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { apiUrl } from '../utils/api';
@@ -11,6 +11,18 @@ import { MASTER_CLIENT_ID } from '../utils/customer';
 import { fieldErrorStyle, labelStyle } from '../styles/formStyles';
 import { pick } from '../utils/pick';
 import { AnnouncementBanner } from '../components/Announcements';
+import '../styles/rupay.css';
+import '../styles/instant.css';
+
+// The back of the flip on the Static QR tile: a RuPay-style card (see rupay.css).
+const RupayCard = () => (
+  <span className="rp-card" aria-hidden="true">
+    <i className="rp-chip" />
+    <i className="rp-nfc" />
+    <i className="rp-flash" />
+    <b className="rp-word">Ru<em>Pay</em></b>
+  </span>
+);
 
 const todayLabel = () =>
   new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
@@ -196,7 +208,7 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
       items: [
         { label: 'PG', Icon: CreditCard, live: true, onClick: () => onNavigate?.('pg') },
         { label: 'Dynamic QR', Icon: QrCode },
-        { label: 'Static QR', Icon: ScanQrCode, live: true, onClick: openQrModal },
+        { label: 'Static QR', Icon: ScanQrCode, live: true, onClick: openQrModal, rupay: true },
       ],
     },
     {
@@ -204,7 +216,7 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
       items: [
         { label: 'IMPS', Icon: SendHorizontal, live: true, onClick: () => onNavigate?.('imps') },
         { label: 'Self Settlement', Icon: WalletMinimal },
-        { label: 'Card Payments', Icon: WalletCards, live: true, onClick: () => onNavigate?.('cardPayments') },
+        { label: 'Card Payments', Icon: WalletCards, live: true, onClick: () => onNavigate?.('cardPayments'), instant: true },
       ],
     },
     // Keeps the 'bbps' key because the board's grid placement in index.css is keyed on it.
@@ -256,15 +268,47 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
                 </div>
 
                 <div className="tp-panel-items">
-                  {section.items.map(({ label, Icon, live, onClick }) => (
+                  {section.items.map(({ label, Icon, live, onClick, rupay, instant }) => (
                     <button
                       key={label}
                       type="button"
                       className={`tp-tile${live ? ' is-live' : ''}`}
                       onClick={() => (live ? onClick?.() : setComingSoon(label))}
                     >
-                      <span className="tp-tile-icon"><Icon size={25} strokeWidth={1.8} /></span>
+                      {instant && <i className="ib-flash" aria-hidden="true" />}
+                      {instant ? (
+                        // The usual icon, plus the charge-and-strike animation around it (see instant.css).
+                        <span className="tp-tile-icon is-instant">
+                          <i className="ib-shock" aria-hidden="true" />
+                          <Icon size={25} strokeWidth={1.8} />
+                          <i className="ib-streak ib-streak-1" aria-hidden="true" />
+                          <i className="ib-streak ib-streak-2" aria-hidden="true" />
+                          <i className="ib-streak ib-streak-3" aria-hidden="true" />
+                          <i className="ib-streak ib-streak-4" aria-hidden="true" />
+                          <svg className="ib-lightning" viewBox="0 0 40 60" aria-hidden="true"><path d="M25 1 L5 35 H18 L11 59 L36 22 H22 L31 1 Z" /></svg>
+                          {[0, 60, 120, 180, 240, 300].map((deg) => (
+                            <i key={deg} className="ib-spark" style={{ '--a': `${deg}deg` }} aria-hidden="true" />
+                          ))}
+                          <span className="ib-bolt" aria-hidden="true"><Zap size={14} strokeWidth={2.2} fill="currentColor" /></span>
+                        </span>
+                      ) : rupay ? (
+                        <span className="tp-tile-icon is-rupay">
+                          <span className="rp-flip">
+                            <span className="rp-face rp-front"><Icon size={25} strokeWidth={1.8} /></span>
+                            <span className="rp-face rp-back"><RupayCard /></span>
+                          </span>
+                          <i className="rp-ring" aria-hidden="true" />
+                        </span>
+                      ) : (
+                        <span className="tp-tile-icon"><Icon size={25} strokeWidth={1.8} /></span>
+                      )}
                       <span className="tp-tile-title">{label}</span>
+                      {instant && (
+                        <span className="ib-pill">
+                          <Zap size={12} strokeWidth={2.4} fill="currentColor" />
+                          <span className="ib-w ib-w1">Instant</span><i className="ib-dot" /><span className="ib-w ib-w2">Super fast</span>
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>

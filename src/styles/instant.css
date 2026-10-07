@@ -1,0 +1,144 @@
+/* ===================== Card Payments tile: "Instant · Super fast" ===================== */
+/* One 4s loop, everything on the same beat:
+     0-58%   calm: speed lines stream past, the bolt badge idles
+     58-66%  CHARGE: the icon squashes back and glows
+     66-76%  STRIKE: a lightning bolt hits, the tile flashes, a shockwave and sparks burst out,
+             the icon dashes forward and the two words in the pill light up one after the other
+     76-100% settle and rest
+   Individual translate/scale properties are used on the icon so they stack with the tile's hover transform. */
+.tp-tile-icon.is-instant {
+  position: relative; overflow: visible;
+  animation: ib-dash 4s ease-in-out infinite, ib-charge 4s ease-in-out infinite;
+}
+
+/* The flash: a warm glow that blooms from the icon across the whole tile at the moment of the strike. */
+.ib-flash {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 38%, rgba(255, 214, 102, 0.65), rgba(255, 170, 40, 0.18) 45%, transparent 70%);
+  opacity: 0; animation: ib-flash 4s ease-out infinite;
+}
+
+.ib-lightning {
+  position: absolute; left: 50%; top: 50%; z-index: 3; width: 34px; height: 50px; margin: -25px 0 0 -17px;
+  fill: #FFD93D; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(255, 190, 40, 0.95)) drop-shadow(0 0 14px rgba(255, 140, 0, 0.8));
+  opacity: 0; animation: ib-strike 4s linear infinite;
+}
+.ib-shock {
+  position: absolute; inset: 0; border-radius: 17px; pointer-events: none;
+  border: 3px solid rgba(255, 170, 40, 0.85);
+  opacity: 0; animation: ib-shock 4s ease-out infinite;
+}
+/* Sparks fly out in six directions from the icon's centre. */
+.ib-spark {
+  position: absolute; left: 50%; top: 50%; z-index: 3; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+  border-radius: 50%; pointer-events: none;
+  background: #FFD93D; box-shadow: 0 0 8px 2px rgba(255, 170, 40, 0.9);
+  opacity: 0; animation: ib-spark 4s ease-out infinite;
+}
+
+.ib-bolt {
+  position: absolute; top: -8px; right: -9px; z-index: 4;
+  display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(145deg, #FFE066 0%, #FF9F1C 100%);
+  color: #fff; border: 2px solid #fff;
+  box-shadow: 0 6px 14px -4px rgba(255, 140, 0, 0.75), 0 0 0 0 rgba(255, 170, 40, 0.55);
+  animation: ib-badge 4s ease-in-out infinite;
+}
+.ib-bolt svg { filter: drop-shadow(0 1px 1px rgba(160, 80, 0, 0.5)); }
+
+/* Speed lines streaming off the icon's left edge, always moving. */
+.ib-streak {
+  position: absolute; left: -32px; height: 3px; border-radius: 3px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #FF9F1C);
+  opacity: 0; animation: ib-streak 0.75s ease-out infinite;
+}
+.ib-streak-1 { top: 12px; width: 24px; }
+.ib-streak-2 { top: 22px; width: 36px; animation-delay: 0.2s; }
+.ib-streak-3 { top: 32px; width: 28px; animation-delay: 0.45s; }
+.ib-streak-4 { top: 42px; width: 34px; animation-delay: 0.1s; }
+
+/* The pill: a colour that keeps travelling round its edge, a sweep of light, and each word lighting up on the strike. */
+@property --ib-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.ib-pill {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: -6px; padding: 5px 12px 5px 9px; border-radius: 99px;
+  background: linear-gradient(90deg, #FFF3D0, #FFE2B8);
+  border: 1px solid transparent;
+  color: #B45309;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.01em; line-height: 1; white-space: nowrap;
+  box-shadow: 0 4px 12px -6px rgba(255, 138, 0, 0.8);
+  animation: ib-pill-in 0.7s 0.2s cubic-bezier(0.34, 1.7, 0.64, 1) both, ib-pill-pulse 4s ease-in-out 0.9s infinite;
+}
+.ib-pill::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: conic-gradient(from var(--ib-angle), #FF8A00, #FFE066, #FF5E3A, #FFB347, #FF8A00);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: ib-spin 3s linear infinite;
+}
+.ib-pill::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.95) 50%, transparent 65%);
+  transform: translateX(-130%); animation: ib-sweep 2.2s ease-in-out 0.8s infinite;
+}
+.ib-pill > svg { color: #F59E0B; filter: drop-shadow(0 0 3px rgba(255, 170, 40, 0.9)); animation: ib-flicker 1.6s steps(1, end) infinite; }
+.ib-w { display: inline-block; transform-origin: 50% 70%; }
+.ib-w1 { animation: ib-word1 4s ease-in-out infinite; }
+.ib-w2 { animation: ib-word2 4s ease-in-out infinite; }
+.ib-dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.55; }
+
+@keyframes ib-dash {
+  0%, 58% { translate: 0 0; scale: 1 1; }
+  62%     { translate: -2px 0; scale: 0.97 1.03; }
+  66%     { translate: -6px 0; scale: 0.93 1.07; }
+  69%     { translate: 13px 0; scale: 1.15 0.9; }
+  72%     { translate: -3px 0; scale: 0.98 1.03; }
+  76%     { translate: 2px 0; scale: 1.02 0.99; }
+  82%, 100% { translate: 0 0; scale: 1 1; }
+}
+@keyframes ib-charge {
+  0%, 56% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -4px var(--tone-glow); }
+  66%     { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 0 0 5px rgba(255, 170, 40, 0.35), 0 0 24px 4px rgba(255, 170, 40, 0.85); }
+  80%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 6px -4px var(--tone-glow); }
+}
+@keyframes ib-flash { 0%, 66% { opacity: 0; } 69% { opacity: 1; } 82%, 100% { opacity: 0; } }
+@keyframes ib-strike {
+  0%, 66%   { opacity: 0; transform: scale(0.8); }
+  67.5%     { opacity: 1; transform: scale(1.08); }
+  70%       { opacity: 0.25; }
+  72%       { opacity: 1; transform: scale(1); }
+  77%, 100% { opacity: 0; transform: scale(1); }
+}
+@keyframes ib-shock { 0%, 67% { opacity: 0; transform: scale(0.7); } 70% { opacity: 0.9; } 84%, 100% { opacity: 0; transform: scale(2.5); } }
+@keyframes ib-spark {
+  0%, 67% { opacity: 0; transform: rotate(var(--a)) translateX(6px) scale(1); }
+  70%     { opacity: 1; }
+  82%, 100% { opacity: 0; transform: rotate(var(--a)) translateX(44px) scale(0.2); }
+}
+@keyframes ib-badge {
+  0%, 60%, 100% { transform: scale(1) rotate(0); box-shadow: 0 6px 14px -4px rgba(255, 140, 0, 0.75), 0 0 0 0 rgba(255, 170, 40, 0.55); }
+  68% { transform: scale(1.35) rotate(-16deg); }
+  73% { transform: scale(0.94) rotate(10deg); box-shadow: 0 6px 14px -4px rgba(255, 140, 0, 0.75), 0 0 0 10px rgba(255, 170, 40, 0); }
+  78% { transform: scale(1.08) rotate(-4deg); }
+  84% { transform: scale(1) rotate(0); }
+}
+@keyframes ib-streak { 0% { opacity: 0; transform: translateX(14px); } 25% { opacity: 0.9; } 100% { opacity: 0; transform: translateX(-12px); } }
+@keyframes ib-spin { to { --ib-angle: 360deg; } }
+@keyframes ib-pill-in { from { opacity: 0; transform: translateY(8px) scale(0.6); } to { opacity: 1; transform: none; } }
+@keyframes ib-pill-pulse {
+  0%, 62%, 100% { box-shadow: 0 4px 12px -6px rgba(255, 138, 0, 0.8), 0 0 0 0 rgba(255, 170, 40, 0.5); }
+  72% { box-shadow: 0 4px 14px -6px rgba(255, 138, 0, 0.9), 0 0 0 8px rgba(255, 170, 40, 0); }
+}
+@keyframes ib-sweep { 0%, 35% { transform: translateX(-130%); } 70%, 100% { transform: translateX(130%); } }
+@keyframes ib-flicker { 0%, 100% { opacity: 1; transform: scale(1); } 8% { opacity: 0.35; } 12% { opacity: 1; transform: scale(1.25); } 18% { opacity: 0.6; } 22% { opacity: 1; transform: scale(1); } }
+@keyframes ib-word1 { 0%, 66%, 80%, 100% { transform: scale(1); color: #B45309; } 70% { transform: scale(1.14); color: #E8590C; text-shadow: 0 0 8px rgba(255, 170, 40, 0.9); } }
+@keyframes ib-word2 { 0%, 71%, 85%, 100% { transform: scale(1); color: #B45309; } 75% { transform: scale(1.14); color: #E8590C; text-shadow: 0 0 8px rgba(255, 170, 40, 0.9); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-tile-icon.is-instant, .ib-flash, .ib-lightning, .ib-shock, .ib-spark, .ib-bolt, .ib-streak,
+  .ib-pill, .ib-pill::before, .ib-pill::after, .ib-pill > svg, .ib-w { animation: none; }
+  .ib-flash, .ib-lightning, .ib-shock, .ib-spark, .ib-streak { display: none; }
+}
