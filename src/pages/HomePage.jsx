@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import QRCode from 'qrcode';
 import {
-  ArrowRight, Check, ChevronDown, CreditCard, FileChartColumn, Fingerprint, IdCard,
-  LayoutGrid, QrCode, ScanQrCode, SendHorizontal, Settings,
+  ArrowRight, CreditCard, FileChartColumn, Fingerprint, IdCard,
+  QrCode, ScanQrCode, SendHorizontal, Settings,
   WalletCards, WalletMinimal, X,
 } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -10,25 +10,7 @@ import { apiUrl } from '../utils/api';
 import { MASTER_CLIENT_ID } from '../utils/customer';
 import { fieldErrorStyle, labelStyle } from '../styles/formStyles';
 import { pick } from '../utils/pick';
-
-// The three home layouts the picker offers. The CSS for all three came
-// across with the board, so this is a class swap, not a second board.
-const BOARD_LAYOUTS = [
-  { key: 'panels', label: 'Panels', hint: 'Each group in its own tinted panel' },
-  { key: 'grid', label: 'Grid', hint: 'Compact tiles on one flat surface' },
-  { key: 'rail', label: 'Rail', hint: 'Groups down the side, services on the right' },
-];
-
-/** Remembered so the choice survives a refresh. */
-const LAYOUT_KEY = 'tamilpay_home_layout';
-const loadLayout = () => {
-  try {
-    const saved = localStorage.getItem(LAYOUT_KEY);
-    return BOARD_LAYOUTS.some((l) => l.key === saved) ? saved : 'panels';
-  } catch {
-    return 'panels';
-  }
-};
+import { AnnouncementBanner } from '../components/Announcements';
 
 const todayLabel = () =>
   new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
@@ -74,18 +56,11 @@ const buildUpiUri = (vpa, payeeName) =>
  * of tiles. Tiles with a working backend (PG, Static QR, IMPS, Report, Admin) navigate
  * or open a modal; the rest (Dynamic QR, Aadhar/PAN Verification) render visible but inert
  * since there's nothing to wire them to yet. */
-const HomePage = ({ onNavigate, user }) => {
+const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
 
   const [showQrModal, setShowQrModal] = useState(false);
   const [comingSoon, setComingSoon] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [layout, setLayoutState] = useState(loadLayout);
-  const activeLayout = BOARD_LAYOUTS.find((l) => l.key === layout) ?? BOARD_LAYOUTS[0];
-  const setLayout = (next) => {
-    setLayoutState(next);
-    try { localStorage.setItem(LAYOUT_KEY, next); } catch { /* private mode — the choice just will not persist */ }
-  };
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState(null);
   const [qrInfo, setQrInfo] = useState(null);
@@ -257,43 +232,16 @@ const HomePage = ({ onNavigate, user }) => {
             <h1 className="tp-greeting">Welcome, {(user?.FULL_NAME || '').split(/\s+/)[0] || 'there'}</h1>
             <p className="tp-subgreeting">Here&apos;s what you can do today.</p>
           </div>
+
           <div className="tp-head-right">
+            {/* Announcements pill: first in the right-hand group, beside the date (see .an-pill-btn). */}
+            <AnnouncementBanner items={announcements} onOpen={onOpenAnnouncements} />
             <span className="tp-date">{todayLabel()}</span>
-
-            <div className="tp-layout-wrap">
-              <button type="button" className="tp-layout-btn" onClick={() => setMenuOpen((o) => !o)}>
-                <LayoutGrid size={15} strokeWidth={2} />
-                {activeLayout.label}
-                <ChevronDown size={14} strokeWidth={2.2} style={{ transform: menuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
-              </button>
-
-              {menuOpen && (
-                <>
-                  <div className="tp-layout-backdrop" onClick={() => setMenuOpen(false)} />
-                  <div className="tp-layout-menu">
-                    <p className="tp-layout-menu-label">Home layout</p>
-                    {BOARD_LAYOUTS.map((l) => (
-                      <button
-                        key={l.key}
-                        type="button"
-                        className={`tp-layout-option${l.key === layout ? ' selected' : ''}`}
-                        onClick={() => { setLayout(l.key); setMenuOpen(false); }}
-                      >
-                        <span>
-                          <span className="tp-layout-option-name">{l.label}</span>
-                          <span className="tp-layout-option-hint">{l.hint}</span>
-                        </span>
-                        {l.key === layout && <Check size={15} strokeWidth={2.6} />}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
           </div>
         </header>
 
-        <div className={`tp-body tp-body-${layout}`}>
+
+        <div className="tp-body tp-body-panels">
           <div className="tp-board">
             {sections.map((section) => (
               <section key={section.key} className={`tp-panel tp-sec-${section.key} tp-tone-${section.tone}`}>

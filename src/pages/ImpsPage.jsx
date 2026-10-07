@@ -100,6 +100,11 @@ const receiptBtnStyle = {
  * (sender/Insert has no matching update/delete, so registration only
  * ever runs once per mobile number).
  */
+// Amount and PIN must start empty every time. Chrome fills saved passwords and remembered values
+// into fields even when they say autocomplete="off", so these inputs start read-only (autofill
+// skips read-only fields) and become editable the moment the person focuses them.
+const unlockField = (e) => e.currentTarget.removeAttribute('readonly');
+
 const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
   const [step, setStep] = useState('input'); // 'input' | 'verified' | 'register'
   const [mobileNumber, setMobileNumber] = useState('');
@@ -1009,7 +1014,8 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
                     <Field label="Amount" error={transferFieldErrors.amount}>
                       <input
                         type="text" inputMode="numeric" className="form-input no-icon"
-                        placeholder="e.g. 500" autoComplete="off"
+                        placeholder="e.g. 500" autoComplete="off" name="imps-transfer-amount"
+                        data-lpignore="true" data-1p-ignore readOnly onFocus={unlockField}
                         value={transferForm.amount}
                         onChange={handleAmountChange}
                       />
@@ -1023,7 +1029,8 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
                     <Field label="PIN" error={transferFieldErrors.pin}>
                       <input
                         type="password" inputMode="numeric" className="form-input no-icon" maxLength={6}
-                        autoComplete="off"
+                        autoComplete="new-password" name="imps-transfer-pin"
+                        data-lpignore="true" data-1p-ignore readOnly onFocus={unlockField}
                         value={transferForm.pin} onChange={updateTransferField('pin')}
                       />
                     </Field>
@@ -1167,7 +1174,8 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
                       <Field label="Amount" error={transferFieldErrors.amount}>
                         <input
                           type="text" inputMode="numeric" className="form-input no-icon"
-                          placeholder="e.g. 500" autoComplete="off"
+                          placeholder="e.g. 500" autoComplete="off" name="imps-transfer-amount"
+                        data-lpignore="true" data-1p-ignore readOnly onFocus={unlockField}
                           value={transferForm.amount}
                           onChange={handleAmountChange}
                         />
@@ -1181,7 +1189,8 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
                       <Field label="PIN" error={transferFieldErrors.pin}>
                         <input
                           type="password" inputMode="numeric" className="form-input no-icon" maxLength={6}
-                          autoComplete="off"
+                          autoComplete="new-password" name="imps-transfer-pin"
+                          data-lpignore="true" data-1p-ignore readOnly onFocus={unlockField}
                           value={transferForm.pin} onChange={updateTransferField('pin')}
                         />
                       </Field>

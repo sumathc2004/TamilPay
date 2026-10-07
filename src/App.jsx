@@ -18,6 +18,12 @@ import QrCodesPage from './pages/QrCodesPage';
 import QrRequestsPage from './pages/QrRequestsPage';
 import CardPaymentsPage from './pages/CardPaymentsPage';
 import ProfilePage from './pages/ProfilePage';
+import AnnouncementsPage from './pages/AnnouncementsPage';
+import { AnnouncementModal } from './components/Announcements';
+import {
+  addKnownAnnouncementIds, fetchActiveAnnouncements, getKnownAnnouncementIds,
+  markAnnouncementPopupShown, shouldShowAnnouncementPopup,
+} from './utils/announcements';
 import PgStatusPage from './pages/PgStatusPage';
 import { fromPath, toPath } from './utils/router';
 import { apiUrl } from './utils/api';
@@ -39,6 +45,7 @@ const PAGES = {
   qrRequests: QrRequestsPage,
   cardPayments: CardPaymentsPage,
   profile: ProfilePage,
+  announcements: AnnouncementsPage,
 };
 
 const SESSION_KEY = 'tamilpay_user';
@@ -200,6 +207,57 @@ function App() {
     navigate('login');
   };
 
+  // Announcements for every signed-in user. The list is re-checked every 20 seconds, so one an
+  // admin posts shows up without a reload. The popup is queued ("pending") rather than shown
+  // directly: it opens straight away while the person is on Home, and otherwise waits until they
+  // are back on Home. What gets queued: everything active the first time they are signed in on a
+  // given day, and afterwards any announcement they have not been shown yet.
+  const [announcements, setAnnouncements] = useState([]);
+  const [pendingAnnouncements, setPendingAnnouncements] = useState([]);
+  const [popupItems, setPopupItems] = useState(null);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setAnnouncements([]);
+      setPendingAnnouncements([]);
+      setPopupItems(null);
+      return undefined;
+    }
+    let cancelled = false;
+    let first = true;
+    const load = () => fetchActiveAnnouncements()
+      .then((list) => {
+        if (cancelled) return;
+        setAnnouncements(list);
+        const known = getKnownAnnouncementIds(user.id);
+        const unseen = list.filter((a) => !known.has(a.id));
+        const queue = first && shouldShowAnnouncementPopup(user.id) ? list : unseen;
+        first = false;
+        if (queue.length === 0) return;
+        // Merged by id: an announcement already waiting is not queued twice.
+        setPendingAnnouncements((prev) => {
+          const byId = new Map(prev.map((a) => [a.id, a]));
+          queue.forEach((a) => byId.set(a.id, a));
+          return [...byId.values()];
+        });
+      })
+      .catch(() => {});
+    load();
+    const timer = setInterval(load, 20 * 1000);
+    const onVisible = () => document.visibilityState === 'visible' && load();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { cancelled = true; clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [user?.id]);
+
+  // Opens the queued popup once the person is on Home and no popup is already open.
+  useEffect(() => {
+    if (!user?.id || currentPage !== 'home' || popupItems || pendingAnnouncements.length === 0) return;
+    addKnownAnnouncementIds(user.id, pendingAnnouncements.map((a) => a.id));
+    markAnnouncementPopupShown(user.id);
+    setPopupItems(pendingAnnouncements);
+    setPendingAnnouncements([]);
+  }, [user?.id, currentPage, popupItems, pendingAnnouncements]);
+
   // A tab left open past midnight signs out on its own. Polled rather than one long timer
   // because timers stall while a laptop sleeps; the check also runs on returning to the tab.
   useEffect(() => {
@@ -272,10 +330,16 @@ function App() {
               user={user}
               walletVersion={walletVersion}
               onWalletChanged={bumpWalletVersion}
+              announcements={announcements}
+              onOpenAnnouncements={() => setPopupItems(announcements)}
             />
           </div>
         </div>
       </div>
+
+      {popupItems && popupItems.length > 0 && (
+        <AnnouncementModal items={popupItems} onClose={() => setPopupItems(null)} />
+      )}
     </div>
   );
 }

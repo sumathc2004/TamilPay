@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowLeftRight, ChevronRight, ClipboardList, CreditCard, LayoutDashboard, QrCode, SlidersHorizontal, Users } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, ChevronRight, ClipboardList, CreditCard, LayoutDashboard, Megaphone, QrCode, SlidersHorizontal, Users } from 'lucide-react';
 import { apiUrl } from '../utils/api';
 
 // Landing spot for admin-only tools. Customers navigates to its own page as
@@ -62,6 +62,7 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
               ['PG Report', "Every retailer's payment gateway links", CreditCard, () => onNavigate?.('reports', { report: 'adminPgReport' })],
               ['QR', 'Create and manage static QR codes', QrCode, () => onNavigate?.('qrCodes')],
               ['QR Requests', 'Approve or reject collect requests', ClipboardList, () => onNavigate?.('qrRequests')],
+              ['Announcements', 'Post updates every customer sees', Megaphone, () => onNavigate?.('announcements')],
             ].map(([label, description, Icon, onClick], i) => (
               <button key={label} type="button" className={`rp-tile rp-tone-${i % 4}`} style={{ '--i': i }} onClick={onClick}>
                 <span className="rp-tile-icon"><Icon size={22} strokeWidth={2} /></span>

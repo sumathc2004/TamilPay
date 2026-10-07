@@ -18,6 +18,7 @@ const STATIC_PATHS = {
   qrRequests: '/qr-requests',
   cardPayments: '/card-payments',
   profile: '/profile',
+  announcements: '/announcements',
 };
 
 const PATH_TO_PAGE = Object.fromEntries(
