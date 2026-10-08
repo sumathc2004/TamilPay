@@ -3551,3 +3551,33 @@ body {
 }
 .df-today:hover:not(:disabled) { background: #DFE9FB; }
 .df-today:disabled { color: #B0B8C4; background: #F6F8FC; cursor: default; }
+
+/* ===== PG RESULT POPUP (after the gateway) ===== */
+.pgr-popup {
+  position: relative;
+  --pgr-accent: #1565D8;
+  --pgr-soft: #E6EEFB;
+  padding: 30px 26px 22px;
+  text-align: center;
+}
+.pgr-popup-close { position: absolute; top: 12px; right: 12px; }
+.pgr-popup-icon { width: 64px; height: 64px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.pgr-popup-title { text-align: center; font-size: 19px; margin: 0 0 4px; }
+.pgr-popup-message { text-align: center; margin: 0 0 16px; }
+.pgr-popup-rows {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px 16px;
+  margin: 0 0 18px; padding: 14px 16px; border-radius: 14px; background: var(--pgr-soft); text-align: left;
+}
+.pgr-popup-rows dt { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #6B7280; font-weight: 700; }
+.pgr-popup-rows dd { margin: 2px 0 0; font-size: 14px; font-weight: 700; color: #111827; word-break: break-all; }
+.pgr-popup-next { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8A93A4; }
+.pgr-popup-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pgr-popup-go {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px;
+  border: 1px solid #D6E2F5; border-radius: 12px; background: #fff; color: #0D4FB0;
+  font-weight: 700; font-size: 12.5px; cursor: pointer;
+}
+.pgr-popup-go:hover { background: #F3F7FD; border-color: #0D4FB0; }
+.pgr-popup-count { margin: 14px 0 0; font-size: 13px; color: #4A5568; }
+.pgr-popup-stay { background: none; border: none; padding: 0; color: #0D4FB0; font-weight: 700; text-decoration: underline; cursor: pointer; font-size: 13px; }
+@media (max-width: 420px) { .pgr-popup-actions { grid-template-columns: 1fr; } .pgr-popup-go { flex-direction: row; justify-content: center; } }

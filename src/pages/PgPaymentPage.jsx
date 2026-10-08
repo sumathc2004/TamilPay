@@ -6,6 +6,26 @@ import { MASTER_CLIENT_ID } from '../utils/customer';
 import { labelStyle } from '../styles/formStyles';
 import Modal from '../components/Modal';
 
+// Customers this retailer has already made links for (name + last four digits only — the
+// same two values every report already shows), so the same card needs no retyping. The full
+// card number, expiry and CVV are entered on the gateway's own page and never pass through here.
+const MAX_SAVED_PAYERS = 8;
+const payersKey = (walletId) => `tamilpay_pg_payers_${walletId}`;
+const loadPayers = (walletId) => {
+  try {
+    const list = JSON.parse(localStorage.getItem(payersKey(walletId)) || '[]');
+    return Array.isArray(list) ? list.filter((p) => p?.name && /^\d{4}$/.test(p.card)) : [];
+  } catch {
+    return [];
+  }
+};
+const savePayer = (walletId, name, card) => {
+  try {
+    const rest = loadPayers(walletId).filter((p) => !(p.name.toLowerCase() === name.toLowerCase() && p.card === card));
+    localStorage.setItem(payersKey(walletId), JSON.stringify([{ name, card }, ...rest].slice(0, MAX_SAVED_PAYERS)));
+  } catch { /* storage unavailable — the form just isn't prefilled next time */ }
+};
+
 const sectionLabelStyle = {
   fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 11, letterSpacing: '1px',
   textTransform: 'uppercase', color: '#7C8491', margin: '0 0 10px',
@@ -47,6 +67,7 @@ const PgPaymentPage = ({ onNavigate, user }) => {
   const [copied, setCopied] = useState(false);
   const [linkError, setLinkError] = useState(null);
   const [linkResult, setLinkResult] = useState(null);
+  const [payers, setPayers] = useState([]);
 
   // The login response's walletId is 0 for most accounts — the customer record upstream
   // simply doesn't carry it. The wallet's real id only comes from Wallet/SelectByCustomerId,
@@ -80,6 +101,23 @@ const PgPaymentPage = ({ onNavigate, user }) => {
       .then(setRows)
       .catch((err) => setError(err.message));
   }, [walletId]);
+
+  useEffect(() => {
+    if (walletId) setPayers(loadPayers(walletId));
+  }, [walletId]);
+
+  const fillPayer = (payer) => {
+    setCustomerName(payer.name);
+    setCardNumber(payer.card);
+    setLinkError(null);
+  };
+
+  // Typing a name that was used before brings its card along, if the card box is still empty.
+  const handleNameChange = (value) => {
+    setCustomerName(value);
+    const match = payers.find((p) => p.name.toLowerCase() === value.trim().toLowerCase());
+    if (match && cardNumber === '') setCardNumber(match.card);
+  };
 
   const uniqueBy = (list, key) => Array.from(new Map(list.map((r) => [r[key], r])).values());
 
@@ -196,6 +234,8 @@ const PgPaymentPage = ({ onNavigate, user }) => {
         const created = await res.json();
         setLinkResult(created);
         rememberReference(created);
+        savePayer(walletId, customerName.trim(), cardNumber);
+        setPayers(loadPayers(walletId));
       } else {
         const problem = await res.json().catch(() => null);
         setLinkError(problem?.detail ?? problem?.message ?? `Failed to generate link (${res.status}).`);
@@ -406,12 +446,41 @@ const PgPaymentPage = ({ onNavigate, user }) => {
                   />
                 </div>
 
+                {payers.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={labelStyle}>Paying with the same card as before?</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {payers.map((p) => {
+                        const active = customerName === p.name && cardNumber === p.card;
+                        return (
+                          <button
+                            key={`${p.name}-${p.card}`}
+                            type="button"
+                            onClick={() => fillPayer(p)}
+                            style={{
+                              border: `1px solid ${active ? 'var(--theme-accent)' : 'rgba(var(--theme-heading-rgb),0.2)'}`,
+                              background: active ? 'var(--theme-tint)' : '#ffffff', color: 'var(--theme-heading)',
+                              borderRadius: 999, padding: '6px 12px', fontFamily: 'Inter, sans-serif',
+                              fontWeight: 600, fontSize: 12, cursor: 'pointer',
+                            }}
+                          >
+                            {p.name} · •••• {p.card}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 11.5, color: '#7C8491', margin: '6px 0 0' }}>
+                      Pick one to fill the name and card, or type a different customer below.
+                    </p>
+                  </div>
+                )}
+
                 <div style={{ marginBottom: 16 }}>
                   <label style={labelStyle}>Customer Name</label>
                   <input
                     className="form-input no-icon"
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     placeholder="e.g. Rohan Kumar"
                   />
                 </div>

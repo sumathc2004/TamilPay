@@ -66,4 +66,43 @@ public class AdminController(RemoteApiClient remoteApi, WalletOwnerDirectory wal
 
         return Ok(result.Data ?? []);
     }
+
+    // Refunds in flight, by transaction id — a double click must not refund twice.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte> RefundsInFlight = new();
+
+    /// <summary>
+    /// Refunds one transaction (an Admin IMPS report row) back to its wallet, whatever its status —
+    /// the remote decides whether that transaction can be refunded and says why not when it can't.
+    /// The client is always the master client, never taken from the request.
+    /// </summary>
+    [HttpPost("refund")]
+    public async Task<IActionResult> Refund(RefundRequest request)
+    {
+        if (request.Id <= 0)
+            return BadRequest(new { message = "Choose a transaction to refund." });
+
+        var remarks = string.IsNullOrWhiteSpace(request.Remarks) ? "Refunded by admin" : request.Remarks.Trim();
+
+        if (!RefundsInFlight.TryAdd(request.Id, 0))
+            return Conflict(new { message = "This refund is already being processed." });
+
+        try
+        {
+            var result = await remoteApi.PostAsync<System.Text.Json.JsonElement?>("Transaction/Refund", new
+            {
+                request.Id,
+                Client_ID = MasterClient.Id,
+                remarks,
+            });
+
+            if (!result.IsSuccess)
+                return UnprocessableEntity(new { message = string.IsNullOrWhiteSpace(result.Message) ? "The refund did not go through." : result.Message });
+
+            return Ok(new { message = string.IsNullOrWhiteSpace(result.Message) ? "Refund successful." : result.Message, id = request.Id });
+        }
+        finally
+        {
+            RefundsInFlight.TryRemove(request.Id, out _);
+        }
+    }
 }

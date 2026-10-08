@@ -39,7 +39,7 @@ const StatusBadge = ({ status }) => (
  * every customer's linked account on the master client (no dedicated settlement-account
  * concept exists upstream); the ledger reuses the same Wallet/Ledger call the Reports
  * page's Ledger report uses, scoped to the signed-in wallet. */
-const WalletSettlementPage = ({ user, walletVersion, onWalletChanged }) => {
+const WalletSettlementPage = ({ user, walletVersion, onWalletChanged, onNavigate }) => {
   // Arriving from the payment gateway, the redirect carries a token for the payment just
   // made. It is read once and then removed from the address, so a refresh does not repeat it.
   const [paymentToken] = useState(() => new URLSearchParams(window.location.search).get('t') || '');
@@ -103,7 +103,7 @@ const WalletSettlementPage = ({ user, walletVersion, onWalletChanged }) => {
           Wallet & Settlement
         </h1>
 
-        {paymentToken && <PgResultBanner token={paymentToken} onSuccess={onWalletChanged} />}
+        {paymentToken && <PgResultBanner token={paymentToken} onSuccess={onWalletChanged} onNavigate={onNavigate} />}
 
         {/* Wallet balance */}
         <div style={{ ...cardStyle, maxWidth: 320, display: 'flex', alignItems: 'center', gap: 16 }}>

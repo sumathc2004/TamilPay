@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, RefreshCw, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, RefreshCw, Undo2, WalletCards, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { buildXlsx } from '../utils/xlsx';
 import { apiUrl } from '../utils/api';
 import DateRangeFields from '../components/DateRangeFields';
 import SearchSelect from '../components/SearchSelect';
+import RowMenu from '../components/RowMenu';
+import Modal from '../components/Modal';
 import { loadImageAsDataUrl } from '../utils/pdf';
 import { MASTER_CLIENT_ID } from '../utils/customer';
 import { pick } from '../utils/pick';
@@ -313,6 +315,8 @@ const buildReports = (isAdmin) => ({
       description: 'Every retailer\'s IMPS transfers, client-wide',
       icon: ArrowLeftRight,
       noWalletRequired: true,
+      // Three-dots menu per row, for every status — admins only, since this report is.
+      rowActions: [{ key: 'refund', label: 'Refund', Icon: Undo2, danger: true }],
       fetchUrl: ({ clientId, fromDate, toDate }) => apiUrl(`/api/admin/imps-report?clientId=${clientId}&fromDate=${fromDate}&toDate=${toDate}`),
       headers: ['ID', 'Time', 'Retailer', 'Shop', 'Account', 'Amount', 'UTR', 'Status'],
       cells: (r) => [
@@ -556,6 +560,47 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     } finally {
       setRefreshingId(null);
       setTimeout(() => setRefreshNote(null), 6000);
+    }
+  };
+
+  // Row actions (the three-dots menu). Refund asks first: it moves money back to the wallet, so
+  // choosing it only opens a confirmation, and nothing is sent until that is confirmed.
+  const [refundRow, setRefundRow] = useState(null);
+  const [refundRemarks, setRefundRemarks] = useState('');
+  const [refunding, setRefunding] = useState(false);
+  const [refundError, setRefundError] = useState(null);
+
+  const openRefund = (row) => {
+    setRefundRow(row);
+    setRefundRemarks('');
+    setRefundError(null);
+  };
+  const closeRefund = () => { if (!refunding) setRefundRow(null); };
+
+  const confirmRefund = async () => {
+    if (!refundRow || refunding) return;
+    setRefunding(true);
+    setRefundError(null);
+    try {
+      const res = await fetch(apiUrl('/api/admin/refund'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: refundRow.id, remarks: refundRemarks.trim() }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setRefundError(body?.message ?? body?.detail ?? `The refund did not go through (${res.status}).`);
+        return;
+      }
+      const id = refundRow.id;
+      setRefundRow(null);
+      setRefreshNote(`#${id}: ${body?.message ?? 'Refund successful.'}`);
+      setTimeout(() => setRefreshNote(null), 6000);
+      loadRows().then(setRows).catch(() => { /* the note above already says it worked */ });
+    } catch (err) {
+      setRefundError(err.message);
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -1027,6 +1072,17 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                           Actions
                         </th>
                       )}
+                      {report.rowActions && (
+                        <th
+                          style={{
+                            position: 'sticky', top: 0, zIndex: 1, background: '#F3F7FD',
+                            padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase',
+                            color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap',
+                          }}
+                        >
+                          More
+                        </th>
+                      )}
                       {showRefresh && (
                         <th
                           style={{
@@ -1068,6 +1124,14 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                             ))}
                           </td>
                         )}
+                        {report.rowActions && (
+                          <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
+                            <RowMenu
+                              label={`More actions for #${r.id}`}
+                              actions={report.rowActions.map((a) => ({ ...a, onSelect: () => openRefund(r) }))}
+                            />
+                          </td>
+                        )}
                         {showRefresh && (
                           <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
                             {/* Only a pending payment has anything left to check. */}
@@ -1091,6 +1155,49 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
           </div>
         )}
       </div>
+      {refundRow && (
+        <Modal onClose={closeRefund} style={{ width: 420, maxWidth: '92vw', padding: 'clamp(20px, 5vw, 26px)' }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 17, color: '#DC2626', margin: '0 0 6px' }}>
+            Refund this transaction?
+          </p>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4A5568', margin: '0 0 14px' }}>
+            The amount is returned to the retailer's wallet. This can't be undone from here.
+          </p>
+          <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 14px', margin: '0 0 14px', padding: '12px 14px', background: '#F3F7FD', borderRadius: 12, fontFamily: 'Inter, sans-serif', fontSize: 13 }}>
+            {[
+              ['Transaction', `#${refundRow.id}`],
+              ['Retailer', refundRow.customerName || `Wallet #${refundRow.walletId}`],
+              ['Account', `${refundRow.accountHolderName || '—'} · ${refundRow.accountNumber || ''}`],
+              ['Amount', money(refundRow.amount)],
+              ['Status', refundRow.status],
+              ['UTR', refundRow.utr || '—'],
+            ].map(([k, v]) => (
+              <React.Fragment key={k}>
+                <dt style={{ color: '#7C8491', fontWeight: 600 }}>{k}</dt>
+                <dd style={{ margin: 0, fontWeight: 700, color: '#111827', wordBreak: 'break-all' }}>{v}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+          <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 700, color: '#7C8491', margin: '0 0 6px' }}>
+            Reason (optional)
+          </label>
+          <input
+            className="form-input no-icon" value={refundRemarks} maxLength={200} autoFocus
+            onChange={(e) => setRefundRemarks(e.target.value)} placeholder="e.g. Bank transfer failed"
+          />
+          {refundError && (
+            <p role="alert" style={{ fontFamily: 'Inter, sans-serif', fontSize: 12.5, color: '#E53E3E', margin: '10px 0 0' }}>{refundError}</p>
+          )}
+          <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+            <button type="button" className="signin-btn" onClick={closeRefund} disabled={refunding} style={{ flex: 1, height: 42, background: '#ffffff', color: 'var(--theme-heading)', border: '1px solid rgba(var(--theme-heading-rgb),0.2)' }}>
+              Cancel
+            </button>
+            <button type="button" className="signin-btn" onClick={confirmRefund} disabled={refunding} style={{ flex: 1, height: 42, background: '#DC2626' }}>
+              {refunding ? 'Refunding…' : 'Yes, refund'}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
