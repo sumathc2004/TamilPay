@@ -28,6 +28,8 @@ import PgStatusPage from './pages/PgStatusPage';
 import { fromPath, toPath } from './utils/router';
 import { apiUrl } from './utils/api';
 import { takePaymentReturnSession } from './utils/pgStatus';
+import { DISABLED_PAGES } from './utils/disabledFeatures';
+import UnavailablePage from './pages/UnavailablePage';
 
 const PAGES = {
   login: LoginPage,
@@ -276,7 +278,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const CurrentPage = PAGES[currentPage] ?? HomePage;
+  const CurrentPage = DISABLED_PAGES.has(currentPage) ? UnavailablePage : PAGES[currentPage] ?? HomePage;
   // Keying on the target customer/report (or lack of one) forces a clean remount
   // whenever navParams changes what a page should show on open — e.g. a different
   // customer's detail page, or Admin's "IMPS Report" tile deep-linking into Reports —

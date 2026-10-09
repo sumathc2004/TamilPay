@@ -3,6 +3,7 @@ import { CreditCard, Landmark, Wallet, X } from 'lucide-react';
 import Modal from './Modal';
 import { usePgStatus } from '../hooks/usePgStatus';
 import { OUTCOMES, statusRows } from '../utils/pgStatus';
+import { DISABLED_PAGES } from '../utils/disabledFeatures';
 
 // How long the payer has to pick where to go before the page takes them back to PG.
 const REDIRECT_SECONDS = 10;
@@ -11,7 +12,7 @@ const DESTINATIONS = [
   { page: 'pg', label: 'PG', Icon: CreditCard },
   { page: 'walletSettlement', label: 'Wallet ledger', Icon: Wallet },
   { page: 'cardPayments', label: 'Card Payments', Icon: Landmark },
-];
+].filter(({ page }) => !DISABLED_PAGES.has(page));
 
 /**
  * The result of the payment a payer has just come back from, shown as a popup over the page

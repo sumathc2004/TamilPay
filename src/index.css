@@ -3581,3 +3581,18 @@ body {
 .pgr-popup-count { margin: 14px 0 0; font-size: 13px; color: #4A5568; }
 .pgr-popup-stay { background: none; border: none; padding: 0; color: #0D4FB0; font-weight: 700; text-decoration: underline; cursor: pointer; font-size: 13px; }
 @media (max-width: 420px) { .pgr-popup-actions { grid-template-columns: 1fr; } .pgr-popup-go { flex-direction: row; justify-content: center; } }
+
+/* ===== DISABLED SERVICES (see utils/disabledFeatures.js) ===== */
+.tp-tile.is-disabled,
+.tp-tile.is-disabled:hover {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: grayscale(1);
+  transform: none;
+  box-shadow: none;
+}
+.tp-tile.is-disabled::before, .tp-tile.is-disabled::after { display: none; }
+.tp-panel-off {
+  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: #6B7280; background: #E5E7EB;
+}

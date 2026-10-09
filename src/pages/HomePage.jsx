@@ -13,6 +13,7 @@ import { pick } from '../utils/pick';
 import { AnnouncementBanner } from '../components/Announcements';
 import '../styles/rupay.css';
 import '../styles/instant.css';
+import { PAY_OUT_DISABLED } from '../utils/disabledFeatures';
 
 // The back of the flip on the Static QR tile: a RuPay-style card (see rupay.css).
 const RupayCard = () => (
@@ -212,7 +213,7 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
       ],
     },
     {
-      key: 'payOut', title: 'Pay Out', caption: 'Send money and settle balances', tone: 'orange',
+      key: 'payOut', title: 'Pay Out', caption: 'Send money and settle balances', tone: 'orange', disabled: PAY_OUT_DISABLED,
       items: [
         { label: 'IMPS', Icon: SendHorizontal, live: true, onClick: () => onNavigate?.('imps') },
         { label: 'Self Settlement', Icon: WalletMinimal },
@@ -262,7 +263,8 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
                     <h2 className="tp-panel-title">{section.title}</h2>
                     <p className="tp-panel-caption">{section.caption}</p>
                   </div>
-                  {section.items.some((i) => i.live) && (
+                  {section.disabled && <span className="tp-panel-off">Disabled</span>}
+                  {!section.disabled && section.items.some((i) => i.live) && (
                     <span className="tp-panel-live">Live <ArrowRight size={13} strokeWidth={2.2} /></span>
                   )}
                 </div>
@@ -272,11 +274,12 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
                     <button
                       key={label}
                       type="button"
-                      className={`tp-tile${live ? ' is-live' : ''}`}
+                      className={`tp-tile${live && !section.disabled ? ' is-live' : ''}${section.disabled ? ' is-disabled' : ''}`}
+                      disabled={section.disabled}
                       onClick={() => (live ? onClick?.() : setComingSoon(label))}
                     >
-                      {instant && <i className="ib-flash" aria-hidden="true" />}
-                      {instant ? (
+                      {instant && !section.disabled && <i className="ib-flash" aria-hidden="true" />}
+                      {instant && !section.disabled ? (
                         // The usual icon, plus the charge-and-strike animation around it (see instant.css).
                         <span className="tp-tile-icon is-instant">
                           <i className="ib-shock" aria-hidden="true" />
@@ -303,7 +306,7 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
                         <span className="tp-tile-icon"><Icon size={25} strokeWidth={1.8} /></span>
                       )}
                       <span className="tp-tile-title">{label}</span>
-                      {instant && (
+                      {instant && !section.disabled && (
                         <span className="ib-pill">
                           <Zap size={12} strokeWidth={2.4} fill="currentColor" />
                           <span className="ib-w ib-w1">Instant</span><i className="ib-dot" /><span className="ib-w ib-w2">Super fast</span>

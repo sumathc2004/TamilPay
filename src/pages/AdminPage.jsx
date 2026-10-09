@@ -10,6 +10,8 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
   const [showDashboard, setShowDashboard] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [dashboardError, setDashboardError] = useState(null);
+  const [explain, setExplain] = useState(null);
+  const [explainError, setExplainError] = useState(null);
 
   // Re-fetches whenever the wallet changes elsewhere (e.g. Navbar's Add Credit),
   // since the dashboard's totals are derived from wallet balances.
@@ -22,6 +24,16 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
       })
       .then(setDashboard)
       .catch((err) => setDashboardError(err.message));
+
+    // Why the wallet total and the pipe balance differ — what moved today.
+    fetch(apiUrl('/api/dashboard/explain'))
+      .then(async (res) => {
+        const body = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(body?.detail ?? body?.message ?? `Request failed (${res.status})`);
+        return body;
+      })
+      .then((data) => { setExplain(data); setExplainError(null); })
+      .catch((err) => setExplainError(err.message));
   }, [showDashboard, walletVersion]);
 
   return (
@@ -114,6 +126,48 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
                       </div>
                     ))}
                   </div>
+
+                  {/* Admin only (this whole panel is): the difference, and what moved today. */}
+                  <p style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 12, letterSpacing: '1px', textTransform: 'uppercase', color: '#7C8491', margin: '0 0 10px' }}>
+                    Difference explained
+                  </p>
+                  {explainError && (
+                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12.5, color: '#E53E3E', margin: '0 0 20px' }}>Couldn't load the explanation: {explainError}</p>
+                  )}
+                  {!explain && !explainError && (
+                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12.5, color: '#7C8491', margin: '0 0 20px' }}>Loading…</p>
+                  )}
+                  {explain && (
+                    <div style={{ background: 'rgba(255,255,255,0.96)', border: '1px solid rgba(var(--theme-heading-rgb),0.06)', borderRadius: 16, padding: '14px 18px', margin: '0 0 20px', boxShadow: '0 2px 20px rgba(var(--theme-heading-rgb), 0.06)' }}>
+                      {[
+                        ['Wallet balance (' + explain.walletCount + ' wallets)', explain.walletBalance],
+                        ['Pipe balance', explain.pipeBalance],
+                        ['Difference', explain.difference, explain.difference >= 0 ? '#38A169' : '#E53E3E', true],
+                      ].map(([label, value, color, strong]) => (
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontFamily: 'Inter, sans-serif', fontSize: 13, fontWeight: strong ? 800 : 600, color: color ?? 'var(--theme-heading)' }}>
+                          <span>{label}</span><span>₹{Number(value).toFixed(2)}</span>
+                        </div>
+                      ))}
+                      <p style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 11, letterSpacing: '1px', textTransform: 'uppercase', color: '#9CA3AF', margin: '12px 0 4px', paddingTop: 10, borderTop: '1px solid rgba(var(--theme-heading-rgb),0.08)' }}>
+                        Today
+                      </p>
+                      {[
+                        ['Card payments credited', explain.today.pgCredit],
+                        ['IMPS paid', explain.today.impsSuccess],
+                        ['IMPS failed', explain.today.impsFailed],
+                        ['IMPS refunded', explain.today.impsRefund],
+                        ['IMPS pending', explain.today.impsPending],
+                        ['Card bills paid', explain.today.bbpsSuccess],
+                        ['Card bills failed', explain.today.bbpsFailed],
+                        ['Card bills refunded', explain.today.bbpsRefund],
+                        ['Verification charges', explain.today.verifyDebit],
+                      ].map(([label, value]) => (
+                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontFamily: 'Inter, sans-serif', fontSize: 12.5, color: '#4A5568' }}>
+                          <span>{label}</span><span style={{ fontWeight: 600 }}>₹{Number(value).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <p style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 12, letterSpacing: '1px', textTransform: 'uppercase', color: '#7C8491', margin: '0 0 10px' }}>
                     Payment Pipes
