@@ -153,10 +153,10 @@ const WalletSettlementPage = ({ user, walletVersion, onWalletChanged, onNavigate
                 <tbody>
                   {accounts.map((a) => (
                     <tr key={a.id} style={{ borderTop: '1px solid rgba(1,87,111,0.06)' }}>
-                      <td style={{ padding: '6px 12px', color: '#4A5568', fontWeight: 600, whiteSpace: 'nowrap' }}>{a.accountHolderName}</td>
-                      <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{a.accountNumber}</td>
-                      <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{a.ifsc}</td>
-                      <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{a.bankName || '—'}</td>
+                      <td style={{ padding: '6px 12px', color: '#4A5568', fontWeight: 600, whiteSpace: 'nowrap' }}>{a.AccountHolderName ?? a.accountHolderName ?? '—'}</td>
+                      <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{a.AccountNumber ?? a.accountNumber ?? '—'}</td>
+                      <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{a.IFSC ?? a.ifsc ?? '—'}</td>
+                      <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{a.BankName || a.bankName || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -196,7 +196,7 @@ const WalletSettlementPage = ({ user, walletVersion, onWalletChanged, onNavigate
               <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
                 <thead>
                   <tr style={{ background: '#F3F7FD', textAlign: 'left' }}>
-                    {['ID', 'Time', 'Type', 'Details', 'Debit', 'Credit', 'Balance', 'Status'].map((h) => (
+                    {['ID', 'Time', 'Type', 'Reason', 'Debit', 'Credit', 'Balance', 'Status'].map((h) => (
                       <th key={h} style={{ padding: '8px 12px', fontSize: 10.5, letterSpacing: '0.8px', textTransform: 'uppercase', color: '#7C8491', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {h}
                       </th>

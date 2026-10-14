@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowLeftRight, ChevronRight, ClipboardList, CreditCard, LayoutDashboard, Megaphone, QrCode, SlidersHorizontal, Users } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, ChevronRight, ClipboardList, CreditCard, LayoutDashboard, Megaphone, Network, QrCode, SlidersHorizontal, Users } from 'lucide-react';
 import { apiUrl } from '../utils/api';
+import DistributorsModal from '../components/DistributorsModal';
 
 // Landing spot for admin-only tools. Customers navigates to its own page as
 // before; Dashboard stays right here and renders its summary alongside the
@@ -8,6 +9,7 @@ import { apiUrl } from '../utils/api';
 // Same tile style as the Reports menu (.rp-grid / .rp-tile in index.css).
 const AdminPage = ({ onNavigate, walletVersion }) => {
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showDistributors, setShowDistributors] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [dashboardError, setDashboardError] = useState(null);
   const [explain, setExplain] = useState(null);
@@ -75,6 +77,7 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
               ['QR', 'Create and manage static QR codes', QrCode, () => onNavigate?.('qrCodes')],
               ['QR Requests', 'Approve or reject collect requests', ClipboardList, () => onNavigate?.('qrRequests')],
               ['Announcements', 'Post updates every customer sees', Megaphone, () => onNavigate?.('announcements')],
+              ['Distributors', 'Add and manage distributors', Network, () => setShowDistributors(true)],
             ].map(([label, description, Icon, onClick], i) => (
               <button key={label} type="button" className={`rp-tile rp-tone-${i % 4}`} style={{ '--i': i }} onClick={onClick}>
                 <span className="rp-tile-icon"><Icon size={22} strokeWidth={2} /></span>
@@ -214,6 +217,7 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
           )}
         </div>
       </div>
+      {showDistributors && <DistributorsModal onClose={() => setShowDistributors(false)} />}
     </div>
   );
 };

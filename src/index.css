@@ -3596,3 +3596,197 @@ body {
   display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
   font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: #6B7280; background: #E5E7EB;
 }
+
+/* ---- Customers: mobile and shop sit under the name; Transfer + Pull back share a cell ---- */
+.cu-person-sub { font-size: 12.5px; color: #6B7280; line-height: 1.3; white-space: nowrap; }
+.cu-person-store { max-width: 220px; overflow: hidden; text-overflow: ellipsis; color: #4A5568; font-weight: 500; }
+.cu-table { min-width: 1020px; }
+.cu-money { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cu-chip-btn--red { background: #FDE8E8; border-color: #F8C9C9; color: #B42318; }
+.cu-chip-btn--red:hover:not(:disabled) { background: #FBD5D5; border-color: #F3AFAF; }
+
+/* ---- Customers table: a fuller desktop layout, and a card per customer on phones ---- */
+.cu-inner { max-width: 1320px; }
+.cu-table { min-width: 940px; }
+.cu-table th, .cu-table td { padding: 16px 18px; }
+.cu-table td { font-size: 14px; }
+.cu-table th:nth-child(1) { width: 28%; }
+.cu-table th:nth-child(2) { width: 12%; }
+.cu-table th:nth-child(3) { width: 13%; }
+.cu-table th:nth-child(4) { width: 19%; }
+.cu-table th:nth-child(5) { width: 12%; }
+.cu-table th:nth-child(6) { width: 8%; }
+.cu-table th:nth-child(7) { width: 8%; }
+.cu-person { gap: 14px; }
+.cu-person-name { font-size: 15.5px; }
+.cu-person-sub { font-size: 13px; }
+.cu-balance { display: inline-block; padding: 6px 12px; border-radius: 10px; background: #EEF4FF; font-size: 14.5px; }
+.cu-money .cu-chip-btn { min-height: 38px; padding: 0 14px; font-size: 13px; }
+
+@media (max-width: 768px) {
+  .cu-inner { max-width: none; }
+  .cu-card { background: transparent; border: 0; box-shadow: none; border-radius: 0; overflow: visible; }
+  .cu-scroll { overflow: visible; }
+  .cu-table { min-width: 0; display: block; }
+  .cu-table thead { display: none; }
+  .cu-table tbody { display: flex; flex-direction: column; gap: 12px; }
+  .cu-table tbody tr {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; padding: 16px;
+    background: #fff; border: 1px solid #E3EAF6; border-radius: 16px; box-shadow: 0 10px 26px -22px rgba(13, 79, 176, 0.55);
+  }
+  .cu-table tbody tr:hover { background: #fff; }
+  .cu-table td, .cu-table tbody tr:last-child td { display: block; padding: 0; border: 0; min-width: 0; }
+  .cu-table td::before {
+    display: block; margin-bottom: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #8A93A4;
+  }
+  .cu-table td:nth-child(1) { grid-column: 1 / -1; order: 0; padding-bottom: 12px; border-bottom: 1px solid #EEF2F8; }
+  .cu-table td:nth-child(1)::before { content: none; }
+  .cu-table td:nth-child(3) { order: 1; }
+  .cu-table td:nth-child(3)::before { content: 'Wallet'; }
+  .cu-table td:nth-child(2) { order: 2; }
+  .cu-table td:nth-child(2)::before { content: 'PAN'; }
+  .cu-table td:nth-child(4) { order: 3; grid-column: 1 / -1; }
+  .cu-table td:nth-child(4)::before { content: 'Transfer / Pull back'; }
+  .cu-table td:nth-child(5) { order: 4; }
+  .cu-table td:nth-child(5)::before { content: 'Payout charges'; }
+  .cu-table td:nth-child(6) { order: 5; }
+  .cu-table td:nth-child(6)::before { content: 'Actions'; }
+  .cu-table td:nth-child(7) { order: 6; grid-column: 1 / -1; }
+  .cu-table td:nth-child(7)::before { content: 'Reports'; }
+  .cu-money { flex-wrap: nowrap; }
+  .cu-money .cu-chip-btn { flex: 1 1 0; justify-content: center; min-height: 42px; }
+  .cu-person-store { max-width: none; white-space: normal; }
+  .cu-table td:nth-child(7) .cu-chip-btn { width: 100%; justify-content: center; min-height: 42px; }
+}
+
+/* ---- Customers: keep Transfer and Pull back side by side; room for the extra action icon ---- */
+.cu-table th:nth-child(1) { width: 24%; }
+.cu-table th:nth-child(2) { width: 10%; }
+.cu-table th:nth-child(3) { width: 12%; }
+.cu-table th:nth-child(4) { width: 23%; }
+.cu-table th:nth-child(5) { width: 12%; }
+.cu-table th:nth-child(6) { width: 11%; }
+.cu-table th:nth-child(7) { width: 8%; }
+@media (min-width: 769px) {
+  .cu-money { flex-wrap: nowrap; gap: 8px; }
+  .cu-money .cu-chip-btn { white-space: nowrap; padding: 0 12px; }
+  .cu-actions { flex-wrap: nowrap; white-space: nowrap; }
+}
+
+/* ---- Customers: the Reports button, with a distributor's View mapping button right under it ---- */
+.cu-reports-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.cu-chip-btn--blue { background: #E6EEFB; border-color: #C4D4F0; color: #0D4FB0; }
+.cu-chip-btn--blue:hover:not(:disabled) { background: #D9E6FA; border-color: #A9C0EA; }
+@media (max-width: 768px) {
+  .cu-reports-cell { align-items: stretch; }
+  .cu-reports-cell .cu-chip-btn { width: 100%; justify-content: center; min-height: 42px; }
+}
+
+/* ---- Distributor mapping page: one summary card, then the table beside the form ---- */
+.dm-top { display: flex; align-items: center; justify-content: space-between; gap: 20px 32px; flex-wrap: wrap; background: #fff; border: 1px solid #E8ECF3; border-radius: 18px; padding: 16px 22px; box-shadow: 0 14px 34px -28px rgba(13, 79, 176, 0.5); }
+.dm-who { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.dm-who-text { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.dm-who-name { font-size: 18px; font-weight: 700; color: #0D4FB0; line-height: 1.2; }
+.dm-who-sub { font-size: 13.5px; color: #6B7280; }
+.dm-who-role { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; }
+.dm-stats { display: flex; gap: 12px; margin: 0; flex-wrap: wrap; }
+.dm-stat { min-width: 150px; padding: 10px 18px; background: #F3F7FD; border-radius: 14px; }
+.dm-stat dt { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #7C8491; }
+.dm-stat dd { margin: 3px 0 0; font-size: 19px; font-weight: 800; color: #172033; font-variant-numeric: tabular-nums; }
+
+.dm-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+.dm-side { grid-column: 2; grid-row: 1; padding: 18px 20px; overflow: visible; position: sticky; top: 16px; }
+.dm-list { grid-column: 1; grid-row: 1; min-width: 0; }
+.dm-card-title { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 15px; font-weight: 700; color: #172033; }
+.dm-form { display: flex; flex-direction: column; gap: 14px; }
+.dm-form .signin-btn { width: 100%; height: 46px; }
+.dm-field { min-width: 0; }
+.dm-field input { height: 46px; box-sizing: border-box; }
+.dm-field .bank-combo { width: 100%; }
+.dm-percent { position: relative; }
+.dm-percent .form-input { padding-right: 38px; }
+.dm-percent-icon { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #9CA3AF; pointer-events: none; }
+.dm-notice { margin: 0; font-size: 13.5px; font-weight: 600; color: #38A169; }
+
+.dm-note { margin: 0; padding: 22px; color: #7C8491; font-size: 14px; }
+.dm-note--error { color: #E53E3E; }
+.dm-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 34px 20px; }
+.dm-empty-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: #E6EEFB; color: #1565D8; margin-bottom: 10px; }
+.dm-empty-title { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: #111827; }
+.dm-empty-text { margin: 0; font-size: 13px; color: #8A93A4; }
+
+.dm-table { width: 100%; min-width: 480px; border-collapse: collapse; }
+.dm-table th { padding: 12px 18px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #7C8491; background: #F7F9FD; border-bottom: 1px solid #EEF2F8; }
+.dm-table td { padding: 14px 18px; border-bottom: 1px solid #F0F3F8; vertical-align: middle; font-size: 14px; color: #374151; }
+.dm-table tbody tr:last-child td { border-bottom: none; }
+.dm-table tbody tr:hover { background: #F8FAFE; }
+.dm-table .is-num { text-align: right; }
+.dm-commission { font-weight: 700; color: #172033; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 1000px) {
+  .dm-grid { grid-template-columns: minmax(0, 1fr); }
+  .dm-side { grid-column: 1; grid-row: 1; position: static; }
+  .dm-list { grid-column: 1; grid-row: 2; }
+}
+@media (max-width: 640px) {
+  .dm-top { padding: 14px 16px; }
+  .dm-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  .dm-stat { min-width: 0; padding: 9px 10px; }
+  .dm-stat dt { font-size: 9.5px; letter-spacing: 0.04em; }
+  .dm-stat dd { font-size: 14.5px; }
+  .dm-side { padding: 16px; }
+  .dm-table { min-width: 0; display: block; }
+  .dm-table thead { display: none; }
+  .dm-table tbody { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+  .dm-table tbody tr { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 14px; background: #fff; border: 1px solid #E3EAF6; border-radius: 14px; }
+  .dm-table tbody tr:hover { background: #fff; }
+  .dm-table td, .dm-table tbody tr:last-child td { display: block; padding: 0; border: 0; text-align: left !important; }
+  .dm-table td::before { display: block; margin-bottom: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8A93A4; }
+  .dm-table td:nth-child(1) { grid-column: 1 / -1; padding-bottom: 10px; border-bottom: 1px solid #EEF2F8; }
+  .dm-table td:nth-child(1)::before { content: none; }
+  .dm-table td:nth-child(2) { grid-column: 1 / -1; }
+  .dm-table td:nth-child(2)::before { content: 'Mobile'; }
+  .dm-table td:nth-child(3)::before { content: 'Balance'; }
+  .dm-table td:nth-child(4)::before { content: 'PG commission'; }
+}
+
+/* ---- Reports on a phone: each row becomes a card, every value under its own column name ---- */
+@media (max-width: 768px) {
+  .rp-cards { min-width: 0 !important; display: block !important; }
+  .rp-cards thead { display: none !important; }
+  .rp-cards tbody { display: flex; flex-direction: column; gap: 12px; }
+  .rp-cards tbody tr {
+    display: grid !important; grid-template-columns: 1fr 1fr; gap: 12px 14px; padding: 14px 16px;
+    background: #fff; border: 1px solid #E3EAF6 !important; border-radius: 16px;
+    box-shadow: 0 10px 26px -22px rgba(13, 79, 176, 0.55);
+  }
+  .rp-cards td {
+    display: block !important; padding: 0 !important; min-width: 0; border: 0; text-align: left !important;
+    white-space: normal !important; overflow-wrap: anywhere; font-size: 13.5px;
+  }
+  .rp-cards td::before {
+    content: attr(data-label); display: block; margin-bottom: 3px; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: #8A93A4;
+  }
+  /* The row's id and time lead the card across its full width. */
+  .rp-cards td:nth-child(1) { grid-column: 1 / -1; padding-bottom: 10px !important; border-bottom: 1px solid #EEF2F8; font-weight: 700; color: #0D4FB0 !important; }
+  .rp-cards td:nth-child(1)::before { display: inline; margin-right: 6px; }
+  .rp-cards td:nth-child(2) { grid-column: 1 / -1; }
+  /* Buttons (receipt, more, refresh) sit together at the bottom. */
+  .rp-cards td[data-label="Actions"], .rp-cards td[data-label="More"], .rp-cards td[data-label="Refresh"] {
+    grid-column: 1 / -1; padding-top: 10px !important; border-top: 1px solid #EEF2F8; display: flex !important; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .rp-cards td[data-label="Actions"]::before, .rp-cards td[data-label="More"]::before, .rp-cards td[data-label="Refresh"]::before { margin: 0 4px 0 0; }
+}
+
+/* ---- Reports on a phone: the header stays in place and only the cards scroll ---- */
+@media (max-width: 768px) {
+  .rp-card { padding: 12px 14px !important; }
+  .rp-head { gap: 8px !important; margin-bottom: 8px !important; }
+  .rp-exports { gap: 6px !important; }
+  .rp-exports button { padding: 6px 10px !important; font-size: 12px !important; }
+  .rp-filters { gap: 8px 10px !important; margin-bottom: 8px !important; }
+  .rp-filters > div[style*="margin-left: auto"] { flex: 1 1 100% !important; margin-left: 0 !important; min-width: 0 !important; }
+  .rp-scroll { flex: 1 1 auto !important; min-height: 160px !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+}

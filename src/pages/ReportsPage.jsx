@@ -53,7 +53,7 @@ const ledgerReport = {
   description: 'Every debit and credit on your wallet',
   icon: BookOpen,
   fetchUrl: ({ walletId, fromDate, toDate }) => apiUrl(`/api/transactions/ledger?walletId=${walletId}&fromDate=${fromDate}&toDate=${toDate}`),
-  headers: ['ID', 'Time', 'Type', 'Details', 'Debit', 'Credit', 'Charges', 'Balance', 'UTR', 'Status'],
+  headers: ['ID', 'Time', 'Type', 'Reason', 'Debit', 'Credit', 'Charges', 'Balance', 'UTR', 'Status'],
   cells: (r) => [
     r.id,
     new Date(r.createdTime).toLocaleString(),
@@ -72,7 +72,7 @@ const ledgerReport = {
     <StatusBadge key="status" status={r.status} />,
   ],
   exportRow: (r) => [r.id, new Date(r.createdTime).toLocaleString(), r.txnType, r.accountHolderName || r.remarks, Number(r.debit).toFixed(2), Number(r.credit).toFixed(2), Number(r.charges).toFixed(2), Number(r.balance).toFixed(2), r.utr || '', r.status],
-  exportHeaders: ['ID', 'Time', 'Type', 'Details', 'Debit', 'Credit', 'Charges', 'Balance', 'UTR', 'Status'],
+  exportHeaders: ['ID', 'Time', 'Type', 'Reason', 'Debit', 'Credit', 'Charges', 'Balance', 'UTR', 'Status'],
   exportWidths: [0.35, 1.3, 0.7, 1.5, 0.85, 0.85, 0.8, 0.95, 1.1, 0.75],
   exportAligns: ['left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'left', 'left'],
   // Colors the "Type" column in the PDF the same way the on-screen table does.
@@ -864,7 +864,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
     // An open report fills the whole content area (the table takes the leftover height and
     // scrolls inside it); the menu is short and just sizes to its tiles.
     <div
-        className="theme-purple"
+        className="theme-purple rp-page"
         style={{
           position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', overflow: 'hidden', background: 'transparent',
           ...(report ? { height: 'calc(100vh - var(--tp-bar, 92px))', display: 'flex', flexDirection: 'column' } : {}),
@@ -878,7 +878,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
         }}
       />
 
-      <div style={{ position: 'relative', zIndex: 2, padding: '14px clamp(16px, 3vw, 32px) 20px', ...(report ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
+      <div className="rp-inner" style={{ position: 'relative', zIndex: 2, padding: '14px clamp(16px, 3vw, 32px) 20px', ...(report ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
         <button
           className="btn-ghost"
           onClick={() => (scopedCustomer ? onNavigate?.('customers') : step === 'menu' ? onNavigate?.('home') : setStep('menu'))}
@@ -923,8 +923,8 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
         )}
 
         {report && (
-          <div style={{ ...cardStyle, maxWidth: 'none', padding: '16px clamp(16px, 3vw, 24px)', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+          <div className="rp-card" style={{ ...cardStyle, maxWidth: 'none', padding: '16px clamp(16px, 3vw, 24px)', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div className="rp-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 18, color: 'var(--theme-heading)', margin: 0 }}>
                   {report.label}
@@ -951,7 +951,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="rp-exports" style={{ display: 'flex', gap: 8 }}>
                 <button type="button" className="icon-btn-anim" onClick={exportPdf} disabled={visibleRows.length === 0} style={exportBtnStyle}>
                   <FileText size={14} /> Export PDF
                 </button>
@@ -961,7 +961,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+            <div className="rp-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
               {report.needsCustomer && (
                 <div>
                   <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 10, letterSpacing: '1.2px', color: '#7C8491', marginBottom: 4, textTransform: 'uppercase' }}>
@@ -1045,8 +1045,8 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
             )}
 
             {!loading && !error && visibleRows.length > 0 && (
-              <div className="table-scroll" style={{ flex: 1, minHeight: 160, overflowY: 'auto' }}>
-                <table style={{ width: '100%', minWidth: 640, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
+              <div className="table-scroll rp-scroll" style={{ flex: 1, minHeight: 160, overflowY: 'auto' }}>
+                <table className="rp-cards" style={{ width: '100%', minWidth: 640, borderCollapse: 'collapse', fontFamily: 'Inter, sans-serif', fontSize: 12.5 }}>
                   <thead>
                     <tr style={{ textAlign: 'left' }}>
                       {report.headers.map((h) => (
@@ -1103,12 +1103,12 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                       // give every row the same undefined key.
                       <tr key={r.id ?? i} style={{ borderTop: '1px solid rgba(var(--theme-heading-rgb),0.06)' }}>
                         {report.cells(r).map((cell, i) => (
-                          <td key={i} style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
+                          <td key={i} data-label={report.headers[i]} style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>
                             {cell}
                           </td>
                         ))}
                         {report.receipt && (
-                          <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
+                          <td data-label="Actions" style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
                             {[
                               ['Print receipt', Printer, printReceipt],
                               ['Download receipt', Download, downloadReceipt],
@@ -1125,7 +1125,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                           </td>
                         )}
                         {report.rowActions && (
-                          <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
+                          <td data-label="More" style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
                             <RowMenu
                               label={`More actions for #${r.id}`}
                               actions={report.rowActions.map((a) => ({ ...a, onSelect: () => openRefund(r) }))}
@@ -1133,7 +1133,7 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
                           </td>
                         )}
                         {showRefresh && (
-                          <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
+                          <td data-label="Refresh" style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
                             {/* Only a pending payment has anything left to check. */}
                             {report.isPending(r) && (
                               <button

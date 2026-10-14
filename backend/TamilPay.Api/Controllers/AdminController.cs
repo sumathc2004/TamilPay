@@ -105,4 +105,58 @@ public class AdminController(RemoteApiClient remoteApi, WalletOwnerDirectory wal
             RefundsInFlight.TryRemove(request.Id, out _);
         }
     }
+
+    // Pullbacks in flight, by retailer wallet — a double click must not pull twice.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte> PullbacksInFlight = new();
+
+    /// <summary>
+    /// Pulls money back from a retailer's wallet into an admin's wallet (Admin/Wallet/Pullback).
+    /// Both wallets must belong to the master client — the same customers the rest of the app
+    /// lists — so a wallet id from anywhere else is refused here instead of being passed on. The
+    /// remote checks the balance and says why when it cannot be done.
+    /// </summary>
+    [HttpPost("pullback")]
+    public async Task<IActionResult> Pullback(PullbackRequest request)
+    {
+        if (request.WalletId <= 0 || request.AdminWalletId <= 0)
+            return BadRequest(new { message = "Choose the retailer and the admin wallet." });
+        if (request.WalletId == request.AdminWalletId)
+            return BadRequest(new { message = "A wallet cannot be pulled back into itself." });
+
+        var amount = decimal.Round(request.Amount, 2);
+        if (amount <= 0 || amount != request.Amount)
+            return BadRequest(new { message = "Enter a valid amount." });
+
+        var owners = await GetWalletOwnersAsync();
+        if (!owners.TryGetValue(request.WalletId, out var from) || !owners.TryGetValue(request.AdminWalletId, out var to))
+            return BadRequest(new { message = "Unknown wallet." });
+        if (!to.IsAdmin || from.IsAdmin)
+            return BadRequest(new { message = "Money can only be pulled back from a retailer into an admin's wallet." });
+
+        var remarks = string.IsNullOrWhiteSpace(request.Remarks) ? "Admin pullback" : request.Remarks.Trim();
+
+        if (!PullbacksInFlight.TryAdd(request.WalletId, 0))
+            return Conflict(new { message = "A pullback from this wallet is already being processed." });
+
+        try
+        {
+            var result = await remoteApi.PostAsync<System.Text.Json.JsonElement?>("Admin/Wallet/Pullback", new
+            {
+                walletId = request.WalletId,
+                adminWalletId = request.AdminWalletId,
+                Client_ID = MasterClient.Id, // The one tenant this app serves; never taken from the request.
+                Amount = amount,
+                remarks,
+            });
+
+            if (!result.IsSuccess)
+                return UnprocessableEntity(new { message = string.IsNullOrWhiteSpace(result.Message) ? "The pullback did not go through." : result.Message });
+
+            return Ok(new { message = string.IsNullOrWhiteSpace(result.Message) ? "Pullback successful." : result.Message, amount });
+        }
+        finally
+        {
+            PullbacksInFlight.TryRemove(request.WalletId, out _);
+        }
+    }
 }

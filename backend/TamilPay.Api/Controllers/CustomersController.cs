@@ -162,6 +162,116 @@ public class CustomersController(RemoteApiClient remoteApi) : ControllerBase
         return Ok(new { message = string.IsNullOrWhiteSpace(result.Message) ? "Updated." : result.Message });
     }
 
+    /// <summary>
+    /// Admin: sets a new wallet password and/or transaction PIN for a customer without needing the old
+    /// ones (Admin/Wallet/ResetPassword) — unlike the customer's own change above, which proves the old
+    /// pair. Only the field sent is changed. The wallet is found from the customer id rather than taken
+    /// from the browser, and the remote only accepts a wallet of the master client.
+    /// </summary>
+    [HttpPost("{id:int}/wallet/reset-password")]
+    public async Task<IActionResult> ResetWalletPassword(int id, AdminResetPasswordRequest request)
+    {
+        var password = string.IsNullOrWhiteSpace(request.NewPassword) ? null : request.NewPassword.Trim();
+        var pin = string.IsNullOrWhiteSpace(request.NewPin) ? null : request.NewPin.Trim();
+
+        if (password is null && pin is null)
+            return BadRequest(new { message = "Enter a new password, a new PIN, or both." });
+        if (password is not null && password.Length < 6)
+            return BadRequest(new { message = "The password must be at least 6 characters." });
+        if (pin is not null && !System.Text.RegularExpressions.Regex.IsMatch(pin, @"^\d{4}$"))
+            return BadRequest(new { message = "The PIN must be exactly 4 digits." });
+
+        var walletResult = await GetWallet(id);
+        if (walletResult.Result is not OkObjectResult { Value: Wallet wallet })
+            return NotFound(new { message = "No wallet is linked to this account." });
+
+        var body = new Dictionary<string, object>
+        {
+            ["walletId"] = wallet.WalletId,
+            ["Client_ID"] = MasterClient.Id, // The one tenant this app serves; never taken from the request.
+        };
+        if (password is not null) body["Password"] = password;
+        if (pin is not null) body["Passpin"] = pin;
+
+        var result = await remoteApi.PostAsync<JsonElement?>("Admin/Wallet/ResetPassword", body);
+        if (!result.IsSuccess)
+            return UnprocessableEntity(new { message = string.IsNullOrWhiteSpace(result.Message) ? "The password could not be reset." : result.Message });
+
+        var what = password is not null && pin is not null ? "password and PIN" : password is not null ? "password" : "PIN";
+        return Ok(new { message = $"The {what} was reset." });
+    }
+
+    /// <summary>
+    /// The retailers mapped to a distributor (Distributor/Mapping/SelectRetailers). The distributor's
+    /// wallet is found from the customer id rather than taken from the browser.
+    /// </summary>
+    [HttpGet("{id:int}/distributor/retailers")]
+    public async Task<IActionResult> GetMappedRetailers(int id)
+    {
+        var walletResult = await GetWallet(id);
+        if (walletResult.Result is not OkObjectResult { Value: Wallet wallet })
+            return NotFound(new { message = "No wallet is linked to this account." });
+
+        var result = await remoteApi.PostAsync<List<MappedRetailer>>("Distributor/Mapping/SelectRetailers", new
+        {
+            Client_ID = MasterClient.Id, // The one tenant this app serves; never taken from the request.
+            distributorWalletId = wallet.WalletId,
+        });
+
+        if (!result.IsSuccess)
+            return Problem(result.Message, statusCode: StatusCodes.Status502BadGateway);
+
+        return Ok(result.Data ?? []);
+    }
+
+    /// <summary>
+    /// Maps a retailer to a distributor, with the PG commission the distributor earns on it
+    /// (Distributor/Mapping/Save). The distributor is the customer in the route, found by wallet
+    /// rather than taken from the browser; only a retailer of the master client can be mapped, and
+    /// only to a distributor. A retailer already mapped to this distributor is refused, so the list
+    /// cannot gain a duplicate row.
+    /// </summary>
+    [HttpPost("{id:int}/distributor/retailers")]
+    public async Task<IActionResult> AddMappedRetailer(int id, AddMappingRequest request, [FromServices] WalletOwnerDirectory owners)
+    {
+        var commission = decimal.Round(request.PgCommissionPercent, 4);
+        if (commission < 0 || commission > 100 || commission != request.PgCommissionPercent)
+            return BadRequest(new { message = "Enter a commission between 0 and 100 (up to 4 decimals)." });
+
+        var walletResult = await GetWallet(id);
+        if (walletResult.Result is not OkObjectResult { Value: Wallet distributorWallet })
+            return NotFound(new { message = "No wallet is linked to this account." });
+
+        var people = await owners.GetAsync();
+        if (!people.TryGetValue(distributorWallet.WalletId, out var distributor) || !System.Text.RegularExpressions.Regex.IsMatch(distributor.Role, @"^distributors?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            return BadRequest(new { message = "Retailers can only be mapped to a distributor." });
+        if (!people.TryGetValue(request.RetailerWalletId, out var retailer) || !string.Equals(retailer.Role, "Retailer", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "Only a retailer can be mapped." });
+
+        var existing = await remoteApi.PostAsync<List<MappedRetailer>>("Distributor/Mapping/SelectRetailers", new
+        {
+            Client_ID = MasterClient.Id,
+            distributorWalletId = distributorWallet.WalletId,
+        });
+        if (!existing.IsSuccess)
+            return Problem(existing.Message, statusCode: StatusCodes.Status502BadGateway);
+        if ((existing.Data ?? []).Any(m => m.RetailerWalletId == request.RetailerWalletId))
+            return Conflict(new { message = "This retailer is already mapped to this distributor." });
+
+        var result = await remoteApi.PostAsync<JsonElement?>("Distributor/Mapping/Save", new
+        {
+            Client_ID = MasterClient.Id, // The one tenant this app serves; never taken from the request.
+            retailerWalletId = request.RetailerWalletId,
+            distributorWalletId = distributorWallet.WalletId,
+            pgCommissionPercent = commission,
+            isActive = true,
+        });
+        if (!result.IsSuccess)
+            return UnprocessableEntity(new { message = string.IsNullOrWhiteSpace(result.Message) ? "The retailer could not be mapped." : result.Message });
+
+        return Ok(new { message = string.IsNullOrWhiteSpace(result.Message) ? "Retailer mapped." : result.Message });
+    }
+
     [HttpPut("{id:int}/wallet/payout-charges")]
     public async Task<ActionResult<Wallet>> UpdatePayoutCharges(int id, UpdatePayoutChargesRequest request)
     {
@@ -235,7 +345,9 @@ public class CustomersController(RemoteApiClient remoteApi) : ControllerBase
     public async Task<ActionResult<IEnumerable<object>>> GetRetailers([FromQuery] int clientId)
     {
         var customersResult = await remoteApi.PostAsync<List<Customer>>($"{BasePath}/SelectByClientId", new { Client_ID = MasterClient.Id });
-        var customers = (customersResult.Data ?? []).Where(c => c.Username is not null);
+        // Distributors are listed on their own (Admin > Distributors), not among the retailers a screen picks from.
+        var customers = (customersResult.Data ?? [])
+            .Where(c => c.Username is not null && !System.Text.RegularExpressions.Regex.IsMatch((c.RoleName ?? string.Empty).Trim(), @"^distributors?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase));
 
         var lookups = customers.Select(async c =>
         {
@@ -245,7 +357,7 @@ public class CustomersController(RemoteApiClient remoteApi) : ControllerBase
                 CustomerId = c.Id,
             });
             var wallet = walletResult.Data?.FirstOrDefault();
-            return wallet is null ? null : new { customerId = c.Id, fullName = c.FullName, storeName = c.StoreName, walletId = wallet.WalletId };
+            return wallet is null ? null : new { customerId = c.Id, fullName = c.FullName, storeName = c.StoreName, walletId = wallet.WalletId, roleName = c.RoleName };
         });
 
         var retailers = (await Task.WhenAll(lookups)).Where(r => r is not null);

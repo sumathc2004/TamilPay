@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRightLeft, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Eye, FileChartColumn, Pencil, Plus, QrCode, Receipt, Search, Trash2, Users, Wallet, WalletCards, X } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, BookOpen, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Eye, FileChartColumn, HandCoins, Network, Pencil, Plus, QrCode, Receipt, Search, Trash2, Users, Wallet, WalletCards, X } from 'lucide-react';
 import { fieldErrorStyle, iconBtnStyle } from '../styles/formStyles';
 import { getCustomerId, MASTER_CLIENT_ID } from '../utils/customer';
 import { apiUrl } from '../utils/api';
 import Avatar from '../components/Avatar';
 import Modal from '../components/Modal';
+import PullbackModal from '../components/PullbackModal';
 
 /**
  * CustomersPage — same visual language as HomePage (background swoosh)
@@ -81,6 +82,7 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
   const [payoutError, setPayoutError] = useState(null);
 
   const [transferTarget, setTransferTarget] = useState(null);
+  const [pullbackTarget, setPullbackTarget] = useState(null);
   const [transferAmount, setTransferAmount] = useState('');
   const [transferError, setTransferError] = useState(null);
   const [transferSubmitting, setTransferSubmitting] = useState(false);
@@ -259,10 +261,14 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
 
   // ── Derived view data: summary figures, the search/role filter, and the current page ──
   const isRetailer = (c) => (c.roleName || '').toLowerCase() === 'retailer';
+  const isDistributor = (c) => /^distributors?$/i.test((c.roleName || '').trim());
+  const isAdminRole = (c) => (c.roleName || '').toLowerCase() === 'admin';
+  const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
   const needle = query.trim().toLowerCase();
   const filtered = customers.filter((c) => {
     if (roleFilter === 'retailer' && !isRetailer(c)) return false;
-    if (roleFilter === 'admin' && isRetailer(c)) return false;
+    if (roleFilter === 'distributor' && !isDistributor(c)) return false;
+    if (roleFilter === 'admin' && !isAdminRole(c)) return false;
     if (!needle) return true;
     return [c.FULL_NAME, c.MOBILE_NUMBER, c.PAN, c.EMAIL_ID, c.STORE_NAME]
       .some((v) => String(v ?? '').toLowerCase().includes(needle));
@@ -284,7 +290,8 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
   const roleTabs = [
     { key: 'all', label: 'All', count: customers.length },
     { key: 'retailer', label: 'Retailers', count: customers.filter(isRetailer).length },
-    { key: 'admin', label: 'Admins', count: customers.filter((c) => !isRetailer(c)).length },
+    { key: 'distributor', label: 'Distributors', count: customers.filter(isDistributor).length },
+    { key: 'admin', label: 'Admins', count: customers.filter(isAdminRole).length },
   ];
 
   return (
@@ -383,11 +390,8 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
                   <tr>
                     <th>Customer</th>
                     <th>PAN</th>
-                    <th>Mobile</th>
-                    <th>Email</th>
-                    <th>Store</th>
                     <th className="is-num">Wallet</th>
-                    <th>Transfer</th>
+                    <th>Transfer / Pull back</th>
                     <th>Payout Charges</th>
                     <th>Actions</th>
                     <th>Reports</th>
@@ -403,14 +407,13 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
                             <Avatar name={c.FULL_NAME} size={36} />
                             <div className="cu-person-text">
                               <span className="cu-person-name">{c.FULL_NAME}</span>
+                              <span className="cu-person-sub">+91 {c.MOBILE_NUMBER}</span>
+                              {c.STORE_NAME && <span className="cu-person-sub cu-person-store" title={c.STORE_NAME}>{c.STORE_NAME}</span>}
                               {c.roleName && <span className={`cu-role cu-role--${isRetailer(c) ? 'retailer' : 'admin'}`}>{c.roleName}</span>}
                             </div>
                           </div>
                         </td>
                         <td className="cu-mono">{c.PAN}</td>
-                        <td className="cu-nowrap">+91 {c.MOBILE_NUMBER}</td>
-                        <td><span className="cu-email" title={c.EMAIL_ID}>{c.EMAIL_ID}</span></td>
-                        <td><span className="cu-store" title={c.STORE_NAME}>{c.STORE_NAME}</span></td>
                         <td className="is-num">
                           {c.username ? (
                             <span className="cu-balance">{rupees(walletBalances[id] ?? c.lastBalance ?? 0)}</span>
@@ -425,9 +428,16 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
                         </td>
                         <td>
                           {c.username ? (
-                            <button type="button" className="cu-chip-btn" onClick={() => openTransfer(c)}>
-                              <ArrowRightLeft size={13} /> Transfer
-                            </button>
+                            <div className="cu-money">
+                              <button type="button" className="cu-chip-btn" onClick={() => openTransfer(c)}>
+                                <ArrowRightLeft size={13} /> Transfer
+                              </button>
+                              {isAdmin && isRetailer(c) && (
+                                <button type="button" className="cu-chip-btn cu-chip-btn--red" onClick={() => setPullbackTarget(c)} title="Take money back from this retailer's wallet">
+                                  <HandCoins size={13} /> Pull back
+                                </button>
+                              )}
+                            </div>
                           ) : (
                             <span className="cu-dash">—</span>
                           )}
@@ -471,6 +481,7 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
                           </div>
                         </td>
                         <td>
+                          <div className="cu-reports-cell">
                           {c.username ? (
                             <button
                               type="button" className="cu-chip-btn"
@@ -482,6 +493,12 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
                           ) : (
                             <span className="cu-dash" title="Add a wallet first">—</span>
                           )}
+                          {c.username && isDistributor(c) && (
+                            <button type="button" className="cu-chip-btn cu-chip-btn--blue" onClick={() => onNavigate?.('distributorMapping', { customerId: id })}>
+                              <Network size={13} /> View mapping
+                            </button>
+                          )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -699,6 +716,15 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
             ))}
           </div>
         </>
+      )}
+
+      {isAdmin && pullbackTarget && (
+        <PullbackModal
+          user={user}
+          presetCustomerId={getCustomerId(pullbackTarget)}
+          onClose={() => setPullbackTarget(null)}
+          onDone={() => { refreshWallets(); onWalletChanged?.(); }}
+        />
       )}
     </div>
   );

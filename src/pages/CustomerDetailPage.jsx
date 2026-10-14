@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, IdCard, MapPin, Pencil, Phone, Trash2, X } from 'lucide-react';
+import { ArrowLeft, IdCard, KeyRound, MapPin, Pencil, Phone, Trash2, X } from 'lucide-react';
 import { labelStyle, fieldErrorStyle } from '../styles/formStyles';
 import { getCustomerId, MASTER_CLIENT_ID } from '../utils/customer';
 import { apiUrl } from '../utils/api';
@@ -8,6 +8,7 @@ import DateField from '../components/DateField';
 import { todayIso } from '../utils/dates';
 import ViewRow from '../components/ViewRow';
 import Modal from '../components/Modal';
+import ResetPasswordModal from '../components/ResetPasswordModal';
 
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const AADHAAR_PATTERN = /^\d{12}$/;
@@ -119,6 +120,7 @@ const CustomerDetailPage = ({ onNavigate, navParams }) => {
   const [submitting, setSubmitting] = useState(false);
 
   const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
@@ -336,6 +338,21 @@ const CustomerDetailPage = ({ onNavigate, navParams }) => {
               >
                 <Pencil size={15} /> Edit
               </button>
+              {/* Only a customer who has a wallet has a password and PIN to reset. */}
+              {customer.username && (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setResetting(true)}
+                  style={{
+                    background: '#ffffff', border: '1px solid rgba(13,79,176,0.3)', borderRadius: 12,
+                    padding: '0 18px', height: 42, fontFamily: 'Inter, sans-serif', fontWeight: 600,
+                    color: '#0D4FB0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                  }}
+                >
+                  <KeyRound size={15} /> Reset password
+                </button>
+              )}
               <button
                 type="button"
                 className="btn-primary"
@@ -509,6 +526,10 @@ const CustomerDetailPage = ({ onNavigate, navParams }) => {
           </form>
         )}
       </div>
+
+      {resetting && customer && (
+        <ResetPasswordModal customerId={getCustomerId(customer)} name={customer.FULL_NAME} onClose={() => setResetting(false)} />
+      )}
 
       {/* Delete confirmation modal */}
       {deleting && (

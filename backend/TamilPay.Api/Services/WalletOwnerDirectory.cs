@@ -6,7 +6,7 @@ using TamilPay.Api.Models;
 namespace TamilPay.Api.Services;
 
 /// <summary>Who a wallet belongs to: the retailer's name and mobile, and their shop.</summary>
-public record WalletOwner(string Name, string Mobile, string Store);
+public record WalletOwner(string Name, string Mobile, string Store, bool IsAdmin = false, string Role = "");
 
 /// <summary>
 /// Wallet -> retailer lookup. Several remote reports (IMPS, QR requests) name only a walletId,
@@ -17,7 +17,7 @@ public record WalletOwner(string Name, string Mobile, string Store);
 /// </summary>
 public class WalletOwnerDirectory(RemoteApiClient remoteApi, IMemoryCache cache)
 {
-    private const string CacheKey = "wallet-owners:v2";
+    private const string CacheKey = "wallet-owners:v4";
 
     public async Task<Dictionary<int, WalletOwner>> GetAsync()
     {
@@ -32,13 +32,13 @@ public class WalletOwnerDirectory(RemoteApiClient remoteApi, IMemoryCache cache)
                 Client_ID = MasterClient.Id,
                 CustomerId = c.Id,
             })).Data?.FirstOrDefault();
-            return (WalletId: wallet?.WalletId, Name: string.IsNullOrWhiteSpace(c.FullName) ? c.StoreName : c.FullName, c.MobileNumber, c.StoreName);
+            return (WalletId: wallet?.WalletId, Name: string.IsNullOrWhiteSpace(c.FullName) ? c.StoreName : c.FullName, c.MobileNumber, c.StoreName, IsAdmin: string.Equals(c.RoleName?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase), Role: c.RoleName?.Trim() ?? string.Empty);
         });
 
         var owners = (await Task.WhenAll(lookups))
             .Where(o => o.WalletId is not null && !string.IsNullOrWhiteSpace(o.Name))
             .GroupBy(o => o.WalletId!.Value)
-            .ToDictionary(g => g.Key, g => new WalletOwner(g.First().Name!, g.First().MobileNumber ?? string.Empty, g.First().StoreName ?? string.Empty));
+            .ToDictionary(g => g.Key, g => new WalletOwner(g.First().Name!, g.First().MobileNumber ?? string.Empty, g.First().StoreName ?? string.Empty, g.First().IsAdmin, g.First().Role));
 
         // Not cached when empty — that would be a failed lookup, not "no retailers".
         if (owners.Count > 0) cache.Set(CacheKey, owners, TimeSpan.FromMinutes(10));

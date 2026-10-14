@@ -30,6 +30,7 @@ import { apiUrl } from './utils/api';
 import { takePaymentReturnSession } from './utils/pgStatus';
 import { DISABLED_PAGES } from './utils/disabledFeatures';
 import UnavailablePage from './pages/UnavailablePage';
+import DistributorMappingPage from './pages/DistributorMappingPage';
 
 const PAGES = {
   login: LoginPage,
@@ -39,6 +40,7 @@ const PAGES = {
   pgsettings: PgSettingsPage,
   customers: CustomersPage,
   customerDetail: CustomerDetailPage,
+  distributorMapping: DistributorMappingPage,
   imps: ImpsPage,
   reports: ReportsPage,
   transactions: TransactionsPage,

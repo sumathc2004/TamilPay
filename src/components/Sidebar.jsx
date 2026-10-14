@@ -12,7 +12,7 @@ const NAV_ITEMS = [
 ];
 
 // Drilling into a sub-page still highlights the nav item it was reached from.
-const ACTIVE_GROUP = { customerDetail: 'customers' };
+const ACTIVE_GROUP = { customerDetail: 'customers', distributorMapping: 'customers' };
 
 const Sidebar = ({ user, currentPage, onNavigate }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';

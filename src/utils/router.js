@@ -43,6 +43,7 @@ export function toPath(page, params) {
     if (params?.customerId != null) return `/customers/${params.customerId}${params.mode === 'edit' ? '/edit' : ''}`;
     return '/customers';
   }
+  if (page === 'distributorMapping' && params?.customerId != null) return `/customers/${params.customerId}/mapping`;
   if (page === 'reports' && params?.report && REPORT_SLUGS[params.report]) {
     return `/reports/${REPORT_SLUGS[params.report]}`;
   }
@@ -62,6 +63,8 @@ export function fromPath(rawPathname) {
       params: { customerId: Number(customerMatch[2]), mode: customerMatch[3] ? 'edit' : 'view' },
     };
   }
+  const mappingMatch = pathname.match(/^\/customers\/(\d+)\/mapping$/);
+  if (mappingMatch) return { page: 'distributorMapping', params: { customerId: Number(mappingMatch[1]) } };
   const reportMatch = pathname.match(/^\/reports\/([a-z-]+)$/);
   if (reportMatch && SLUG_TO_REPORT[reportMatch[1]]) {
     return { page: 'reports', params: { report: SLUG_TO_REPORT[reportMatch[1]] } };
