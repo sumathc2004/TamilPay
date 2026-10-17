@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import QRCode from 'qrcode';
 import {
-  ArrowRight, CreditCard, FileChartColumn, Fingerprint, IdCard,
+  ArrowRight, CreditCard, FileChartColumn, Fingerprint, IdCard, Users,
   QrCode, ScanQrCode, SendHorizontal, Settings,
   WalletCards, WalletMinimal, X, Zap,
 } from 'lucide-react';
@@ -71,6 +71,7 @@ const buildUpiUri = (vpa, payeeName) =>
  * since there's nothing to wire them to yet. */
 const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
+  const isDistributor = /^distributors?$/i.test((user?.roleName || '').trim());
 
   const [showQrModal, setShowQrModal] = useState(false);
   const [comingSoon, setComingSoon] = useState(null);
@@ -232,6 +233,7 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
       key: 'more', title: 'More', caption: 'Manage and monitor', tone: 'sky',
       items: [
         { label: 'Reports', Icon: FileChartColumn, live: true, onClick: () => onNavigate?.('reports') },
+        ...(isDistributor ? [{ label: 'Retailers', Icon: Users, live: true, onClick: () => onNavigate?.('myRetailers') }] : []),
         ...(isAdmin ? [{ label: 'Admin', Icon: Settings, live: true, onClick: () => onNavigate?.('admin') }] : []),
       ],
     },

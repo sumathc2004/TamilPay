@@ -67,12 +67,15 @@ const WalletSettlementPage = ({ user, walletVersion, onWalletChanged, onNavigate
       .catch((err) => setWalletError(err.message));
   }, [user, walletVersion]);
 
+  const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
+
   useEffect(() => {
+    if (!isAdmin) return;
     fetch(apiUrl(`/api/bankaccounts/list?clientId=${MASTER_CLIENT_ID}`))
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`Request failed (${res.status})`))))
       .then(setAccounts)
       .catch((err) => setAccountsError(err.message));
-  }, []);
+  }, [isAdmin]);
 
   const fetchLedger = useCallback(() => {
     if (!user?.walletId) return;
@@ -123,7 +126,8 @@ const WalletSettlementPage = ({ user, walletVersion, onWalletChanged, onNavigate
           </div>
         </div>
 
-        {/* Settlement bank accounts */}
+        {/* Settlement bank accounts — admins only */}
+        {isAdmin && (
         <div style={{ ...cardStyle, maxWidth: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <div style={{ width: 36, height: 36, borderRadius: 11, background: '#EDE3FB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -164,6 +168,7 @@ const WalletSettlementPage = ({ user, walletVersion, onWalletChanged, onNavigate
             </div>
           )}
         </div>
+        )}
 
         {/* Ledger */}
         <div style={{ ...cardStyle, maxWidth: 'none' }}>

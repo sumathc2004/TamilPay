@@ -31,6 +31,7 @@ import { takePaymentReturnSession } from './utils/pgStatus';
 import { DISABLED_PAGES } from './utils/disabledFeatures';
 import UnavailablePage from './pages/UnavailablePage';
 import DistributorMappingPage from './pages/DistributorMappingPage';
+import MyRetailersPage from './pages/MyRetailersPage';
 
 const PAGES = {
   login: LoginPage,
@@ -41,6 +42,7 @@ const PAGES = {
   customers: CustomersPage,
   customerDetail: CustomerDetailPage,
   distributorMapping: DistributorMappingPage,
+  myRetailers: MyRetailersPage,
   imps: ImpsPage,
   reports: ReportsPage,
   transactions: TransactionsPage,

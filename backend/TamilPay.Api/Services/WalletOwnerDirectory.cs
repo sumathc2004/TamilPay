@@ -19,6 +19,13 @@ public class WalletOwnerDirectory(RemoteApiClient remoteApi, IMemoryCache cache)
 {
     private const string CacheKey = "wallet-owners:v4";
 
+    /// <summary>The same list, read again now — for a write that must not be refused because a wallet is newer than the cache.</summary>
+    public async Task<Dictionary<int, WalletOwner>> GetFreshAsync()
+    {
+        cache.Remove(CacheKey);
+        return await GetAsync();
+    }
+
     public async Task<Dictionary<int, WalletOwner>> GetAsync()
     {
         if (cache.TryGetValue<Dictionary<int, WalletOwner>>(CacheKey, out var cached) && cached is not null)

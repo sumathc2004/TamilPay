@@ -243,6 +243,11 @@ public class CustomersController(RemoteApiClient remoteApi) : ControllerBase
             return NotFound(new { message = "No wallet is linked to this account." });
 
         var people = await owners.GetAsync();
+        bool Mappable(Dictionary<int, WalletOwner> p) =>
+            p.TryGetValue(distributorWallet.WalletId, out var d) && System.Text.RegularExpressions.Regex.IsMatch(d.Role, @"^distributors?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            && p.TryGetValue(request.RetailerWalletId, out var r) && string.Equals(r.Role, "Retailer", StringComparison.OrdinalIgnoreCase);
+        // A retailer or distributor created in the last few minutes is not in the kept list yet: read it again before refusing.
+        if (!Mappable(people)) people = await owners.GetFreshAsync();
         if (!people.TryGetValue(distributorWallet.WalletId, out var distributor) || !System.Text.RegularExpressions.Regex.IsMatch(distributor.Role, @"^distributors?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
             return BadRequest(new { message = "Retailers can only be mapped to a distributor." });
         if (!people.TryGetValue(request.RetailerWalletId, out var retailer) || !string.Equals(retailer.Role, "Retailer", StringComparison.OrdinalIgnoreCase))

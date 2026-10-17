@@ -3790,3 +3790,8 @@ body {
   .rp-filters > div[style*="margin-left: auto"] { flex: 1 1 100% !important; margin-left: 0 !important; min-width: 0 !important; }
   .rp-scroll { flex: 1 1 auto !important; min-height: 160px !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
 }
+
+/* ---- A distributor's own Retailers page ---- */
+.mr-toolbar { padding: 14px 18px 0; }
+.mr-toolbar .cu-search { max-width: 420px; }
+@media (max-width: 640px) { .mr-toolbar { padding: 12px 12px 0; } .mr-toolbar .cu-search { max-width: none; } }

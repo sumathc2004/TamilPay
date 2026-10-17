@@ -19,6 +19,7 @@ const STATIC_PATHS = {
   cardPayments: '/card-payments',
   profile: '/profile',
   announcements: '/announcements',
+  myRetailers: '/my-retailers',
 };
 
 const PATH_TO_PAGE = Object.fromEntries(

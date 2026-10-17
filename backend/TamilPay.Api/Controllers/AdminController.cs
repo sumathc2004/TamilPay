@@ -128,6 +128,9 @@ public class AdminController(RemoteApiClient remoteApi, WalletOwnerDirectory wal
             return BadRequest(new { message = "Enter a valid amount." });
 
         var owners = await GetWalletOwnersAsync();
+        // A wallet created in the last few minutes is not in the kept list yet: read it again before refusing.
+        if (!owners.ContainsKey(request.WalletId) || !owners.ContainsKey(request.AdminWalletId))
+            owners = await walletOwners.GetFreshAsync();
         if (!owners.TryGetValue(request.WalletId, out var from) || !owners.TryGetValue(request.AdminWalletId, out var to))
             return BadRequest(new { message = "Unknown wallet." });
         if (!to.IsAdmin || from.IsAdmin)
