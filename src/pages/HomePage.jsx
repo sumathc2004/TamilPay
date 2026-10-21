@@ -11,9 +11,10 @@ import { MASTER_CLIENT_ID } from '../utils/customer';
 import { fieldErrorStyle, labelStyle } from '../styles/formStyles';
 import { pick } from '../utils/pick';
 import { AnnouncementBanner } from '../components/Announcements';
+import HomeDashboard from '../components/HomeDashboard';
 import '../styles/rupay.css';
 import '../styles/instant.css';
-import { PAY_OUT_DISABLED } from '../utils/disabledFeatures';
+import { PAY_OUT_DISABLED, STATIC_QR_DISABLED } from '../utils/disabledFeatures';
 
 // The back of the flip on the Static QR tile: a RuPay-style card (see rupay.css).
 const RupayCard = () => (
@@ -69,7 +70,7 @@ const buildUpiUri = (vpa, payeeName) =>
  * of tiles. Tiles with a working backend (PG, Static QR, IMPS, Report, Admin) navigate
  * or open a modal; the rest (Dynamic QR, Aadhar/PAN Verification) render visible but inert
  * since there's nothing to wire them to yet. */
-const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements }) => {
+const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements, walletVersion }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
   const isDistributor = /^distributors?$/i.test((user?.roleName || '').trim());
 
@@ -210,7 +211,7 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
       items: [
         { label: 'PG', Icon: CreditCard, live: true, onClick: () => onNavigate?.('pg') },
         { label: 'Dynamic QR', Icon: QrCode },
-        { label: 'Static QR', Icon: ScanQrCode, live: true, onClick: openQrModal, rupay: true },
+        { label: 'Static QR', Icon: ScanQrCode, live: true, onClick: openQrModal, rupay: true, disabled: STATIC_QR_DISABLED },
       ],
     },
     {
@@ -255,6 +256,8 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
           </div>
         </header>
 
+        {/* Admin only: the dashboard numbers, so they are in front without opening Admin. */}
+        {isAdmin && <HomeDashboard walletVersion={walletVersion} />}
 
         <div className="tp-body tp-body-panels">
           <div className="tp-board">
@@ -272,16 +275,18 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
                 </div>
 
                 <div className="tp-panel-items">
-                  {section.items.map(({ label, Icon, live, onClick, rupay, instant }) => (
+                  {section.items.map(({ label, Icon, live, onClick, rupay, instant, disabled }) => {
+                    const off = section.disabled || disabled;
+                    return (
                     <button
                       key={label}
                       type="button"
-                      className={`tp-tile${live && !section.disabled ? ' is-live' : ''}${section.disabled ? ' is-disabled' : ''}`}
-                      disabled={section.disabled}
+                      className={`tp-tile${live && !off ? ' is-live' : ''}${off ? ' is-disabled' : ''}`}
+                      disabled={off}
                       onClick={() => (live ? onClick?.() : setComingSoon(label))}
                     >
-                      {instant && !section.disabled && <i className="ib-flash" aria-hidden="true" />}
-                      {instant && !section.disabled ? (
+                      {instant && !off && <i className="ib-flash" aria-hidden="true" />}
+                      {instant && !off ? (
                         // The usual icon, plus the charge-and-strike animation around it (see instant.css).
                         <span className="tp-tile-icon is-instant">
                           <i className="ib-shock" aria-hidden="true" />
@@ -308,14 +313,15 @@ const HomePage = ({ onNavigate, user, announcements = [], onOpenAnnouncements })
                         <span className="tp-tile-icon"><Icon size={25} strokeWidth={1.8} /></span>
                       )}
                       <span className="tp-tile-title">{label}</span>
-                      {instant && !section.disabled && (
+                      {instant && !off && (
                         <span className="ib-pill">
                           <Zap size={12} strokeWidth={2.4} fill="currentColor" />
                           <span className="ib-w ib-w1">Instant</span><i className="ib-dot" /><span className="ib-w ib-w2">Super fast</span>
                         </span>
                       )}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             ))}

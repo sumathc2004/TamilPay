@@ -17,8 +17,32 @@ namespace TamilPay.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-public class QrController(RemoteApiClient remoteApi, WalletOwnerDirectory walletOwners) : ControllerBase
+public class QrController(RemoteApiClient remoteApi, WalletOwnerDirectory walletOwners, QrRemarkStore remarkStore) : ControllerBase
 {
+    // The retailer's note is kept by this app (see QrRemarkStore) because the remote does not keep it; it is
+    // put back on each row as "retailerRemarks", leaving the remote's own "remarks" (an admin's rejection
+    // reason) untouched.
+    private List<JsonNode?> WithRetailerRemarks(IEnumerable<JsonNode?> rows)
+    {
+        var list = rows.ToList();
+        foreach (var node in list)
+        {
+            if (node is not JsonObject row) continue;
+            try
+            {
+                var note = remarkStore.Find(
+                    row["walletId"]?.GetValue<int>() ?? 0, row["QrId"]?.GetValue<int>() ?? 0,
+                    row["UTR"]?.ToString() ?? string.Empty, row["Amount"]?.GetValue<decimal>() ?? 0);
+                if (note is not null) row["retailerRemarks"] = note;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+            {
+                // A row of a shape we do not expect simply has no note.
+            }
+        }
+        return list;
+    }
+
     // clientId comes from the logged-in user (MASTER_CLIENT_ID), never hardcoded.
     //
     // Like customer/SelectById and wallet/Login, GetNext's "data" comes back as a
@@ -57,11 +81,17 @@ public class QrController(RemoteApiClient remoteApi, WalletOwnerDirectory wallet
             Vpa = request.Vpa,
             Amount = request.Amount,
             UTR = request.Utr,
-            Remarks = string.IsNullOrWhiteSpace(request.Remarks) ? null : request.Remarks.Trim(),
+            // Lower-case, the spelling every other call that keeps a remark uses (Reject, Wallet/Credit,
+            // Transaction/Refund, Pullback) — the one place it was capitalised is the one that lost it.
+            remarks = string.IsNullOrWhiteSpace(request.Remarks) ? null : request.Remarks.Trim(),
         });
 
         if (!result.IsSuccess)
             return Problem(result.Message, statusCode: StatusCodes.Status502BadGateway);
+
+        // The remote does not keep the note, so it is kept here.
+        if (!string.IsNullOrWhiteSpace(request.Remarks))
+            remarkStore.Add(request.WalletId, request.QrId, request.Utr, request.Amount, request.Remarks);
 
         return Ok(new { message = result.Message, data = result.Data });
     }
@@ -86,7 +116,7 @@ public class QrController(RemoteApiClient remoteApi, WalletOwnerDirectory wallet
         if (!result.IsSuccess)
             return Problem(result.Message, statusCode: StatusCodes.Status502BadGateway);
 
-        return Ok(result.Data ?? []);
+        return Ok(WithRetailerRemarks((result.Data ?? []).Select(e => JsonNode.Parse(e.GetRawText()))));
     }
 
     /// <summary>
@@ -149,7 +179,7 @@ public class QrController(RemoteApiClient remoteApi, WalletOwnerDirectory wallet
         if (!result.IsSuccess)
             return Problem(result.Message, statusCode: StatusCodes.Status502BadGateway);
 
-        return Ok(await walletOwners.WithShopAsync(result.Data));
+        return Ok(WithRetailerRemarks(await walletOwners.WithShopAsync(result.Data)));
     }
 
     /// <summary>Every QR collect request awaiting admin approval — Admin > QR Requests'
@@ -165,7 +195,7 @@ public class QrController(RemoteApiClient remoteApi, WalletOwnerDirectory wallet
         if (!result.IsSuccess)
             return Problem(result.Message, statusCode: StatusCodes.Status502BadGateway);
 
-        return Ok(await walletOwners.WithShopAsync(result.Data));
+        return Ok(WithRetailerRemarks(await walletOwners.WithShopAsync(result.Data)));
     }
 
 

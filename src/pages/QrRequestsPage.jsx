@@ -3,6 +3,7 @@ import { Check, ClipboardList, RefreshCw, X } from 'lucide-react';
 import Modal from '../components/Modal';
 import { apiUrl } from '../utils/api';
 import { pick } from '../utils/pick';
+import { qrRemarkParts } from '../utils/qrRemarks';
 import { fieldErrorStyle, labelStyle } from '../styles/formStyles';
 
 const cardStyle = {
@@ -45,6 +46,7 @@ const readRow = (r) => ({
   qrName: pick(r, ['QrName', 'qrName']),
   creditAmount: pick(r, ['creditAmount', 'CreditAmount']),
   remarks: pick(r, ['remarks', 'Remarks']),
+  retailerRemarks: pick(r, ['retailerRemarks']),
 });
 
 // A second, muted line under a table value.
@@ -240,8 +242,17 @@ const QrRequestsPage = () => {
                           {r.creditAmount != null && <Sub>Credit {money(r.creditAmount)}</Sub>}
                         </td>
                         <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.utr ?? '—'}</td>
-                        <td style={{ padding: '6px 12px', color: r.remarks ? '#374151' : '#B0B8C4', minWidth: 140, maxWidth: 280, wordBreak: 'break-word' }}>
-                          {r.remarks || '—'}
+                        <td style={{ padding: '6px 12px', color: (r.remarks || r.retailerRemarks) ? '#374151' : '#B0B8C4', minWidth: 140, maxWidth: 280, wordBreak: 'break-word' }}>
+                          {(() => {
+                            const { note, reason } = qrRemarkParts(r);
+                            if (!note && !reason) return '—';
+                            return (
+                              <>
+                                {note && <div>{note}</div>}
+                                {reason && <div style={{ color: '#E53E3E', fontSize: 12 }}>Rejected: {reason}</div>}
+                              </>
+                            );
+                          })()}
                         </td>
                         <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', gap: 6 }}>
@@ -327,8 +338,17 @@ const QrRequestsPage = () => {
                           {r.creditAmount != null && <Sub>Credit {money(r.creditAmount)}</Sub>}
                         </td>
                         <td style={{ padding: '6px 12px', color: '#4A5568', whiteSpace: 'nowrap' }}>{r.utr ?? '—'}</td>
-                        <td style={{ padding: '6px 12px', color: r.remarks ? '#374151' : '#B0B8C4', minWidth: 140, maxWidth: 280, wordBreak: 'break-word' }}>
-                          {r.remarks || '—'}
+                        <td style={{ padding: '6px 12px', color: (r.remarks || r.retailerRemarks) ? '#374151' : '#B0B8C4', minWidth: 140, maxWidth: 280, wordBreak: 'break-word' }}>
+                          {(() => {
+                            const { note, reason } = qrRemarkParts(r);
+                            if (!note && !reason) return '—';
+                            return (
+                              <>
+                                {note && <div>{note}</div>}
+                                {reason && <div style={{ color: '#E53E3E', fontSize: 12 }}>Rejected: {reason}</div>}
+                              </>
+                            );
+                          })()}
                         </td>
                         <td style={{ padding: '6px 12px', whiteSpace: 'nowrap' }}><StatusBadge status={r.status} /></td>
                       </tr>

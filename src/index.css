@@ -1778,7 +1778,7 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   /* Tiles grow into the panel but stop at a sane card height and sit
      centred, so a two-tile panel does not stretch into a billboard. */
-  grid-auto-rows: minmax(134px, 200px);
+  grid-auto-rows: minmax(0, 200px);
   align-content: center;
 }
 .tp-body-panels .tp-sec-bbps .tp-panel-items { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1795,7 +1795,7 @@ body {
   .tp-body-panels .tp-board { gap: 12px; }
   .tp-body-panels .tp-tile { gap: 7px; padding: 10px 8px; }
   .tp-body-panels .tp-tile-icon { width: 50px; height: 50px; border-radius: 15px; }
-  .tp-body-panels .tp-panel-items { grid-auto-rows: minmax(104px, 156px); }
+  .tp-body-panels .tp-panel-items { grid-auto-rows: minmax(0, 156px); }
   .tp-head { margin-bottom: 10px; }
 }
 
@@ -3795,3 +3795,99 @@ body {
 .mr-toolbar { padding: 14px 18px 0; }
 .mr-toolbar .cu-search { max-width: 420px; }
 @media (max-width: 640px) { .mr-toolbar { padding: 12px 12px 0; } .mr-toolbar .cu-search { max-width: none; } }
+
+/* ---- Home dashboard strip (admin only): pipe balance, wallet balance, wallets, difference ---- */
+.hd-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.hd-card {
+  --hd-accent: var(--tp-blue);
+  --hd-tint: rgba(21, 101, 216, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 14px;
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 6px 16px -12px rgba(17, 24, 39, 0.25);
+}
+.hd-blue { --hd-accent: var(--tp-blue); --hd-tint: rgba(21, 101, 216, 0.1); }
+.hd-orange { --hd-accent: var(--tp-orange); --hd-tint: rgba(242, 106, 27, 0.11); }
+.hd-amber { --hd-accent: #C98200; --hd-tint: rgba(245, 163, 20, 0.14); }
+.hd-green { --hd-accent: #1F8F55; --hd-tint: rgba(56, 161, 105, 0.13); }
+.hd-red { --hd-accent: #D93636; --hd-tint: rgba(229, 62, 62, 0.11); }
+.hd-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--hd-tint);
+  color: var(--hd-accent);
+}
+.hd-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hd-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tp-ink-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hd-value {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--tp-blue-deep);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hd-green .hd-value, .hd-red .hd-value { color: var(--hd-accent); }
+.hd-value.is-loading {
+  width: 84px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #EEF1F7, #F7F9FC, #EEF1F7);
+}
+.hd-error { font-size: 12.5px; color: #D93636; margin: 0 0 12px; }
+
+@media (max-width: 1100px) {
+  .hd-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .hd-strip { gap: 8px; }
+  .hd-card { gap: 9px; padding: 10px; }
+  .hd-icon { width: 32px; height: 32px; border-radius: 10px; }
+  .hd-value { font-size: 15.5px; }
+  .hd-label { font-size: 9.5px; letter-spacing: 0.04em; }
+}
+
+/* Home fits the screen it is on: the page takes exactly the room under the brand bar and the tiles
+   give a little, instead of the page growing a scrollbar. Below the floor (a very short window) it
+   scrolls rather than crushing the tiles. */
+@media (min-width: 901px) {
+  .app-shell-content > .tp-page { flex: 1 1 0; min-height: 500px; }
+}
+@media (max-height: 900px) {
+  .hd-strip { gap: 10px; margin-bottom: 10px; }
+  .hd-card { padding: 8px 12px; gap: 10px; border-radius: 12px; }
+  .hd-icon { width: 32px; height: 32px; border-radius: 10px; }
+  .hd-value { font-size: 17px; }
+  .tp-body-panels .tp-board { gap: 12px; }
+  .tp-body-panels .tp-panel { padding: 14px 16px; }
+  .tp-body-panels .tp-panel-head { margin-bottom: 8px; }
+  .tp-body-panels .tp-tile { gap: 7px; padding: 8px; }
+  .tp-body-panels .tp-tile-icon { width: 50px; height: 50px; border-radius: 15px; }
+  .tp-head { margin-bottom: 10px; }
+  .tp-page { padding-top: 14px; padding-bottom: 14px; }
+}

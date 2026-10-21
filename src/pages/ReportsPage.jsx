@@ -10,6 +10,7 @@ import Modal from '../components/Modal';
 import { loadImageAsDataUrl } from '../utils/pdf';
 import { MASTER_CLIENT_ID } from '../utils/customer';
 import { pick } from '../utils/pick';
+import { qrRemarkText } from '../utils/qrRemarks';
 import tamilPayLogo from '../assets/images/tamilpay-logo.png';
 
 // toISOString() reports the UTC date, which drifts a calendar day off the user's own
@@ -274,7 +275,7 @@ const buildReports = (isAdmin) => ({
         createdTime ? new Date(createdTime).toLocaleString() : '—',
         <RetailerCell key="retailer" name={pick(r, ['retailerName', 'RetailerName'])} mobile={pick(r, ['username', 'Username'])} />,
         pick(r, ['QrName', 'qrName']) || '—',
-        pick(r, ['remarks', 'Remarks']) || '—',
+        qrRemarkText(r) || '—',
         <span key="amount" style={{ fontWeight: 700 }}>{money(pick(r, ['amount', 'Amount']) ?? 0)}</span>,
         pick(r, ['utr', 'Utr', 'UTR']) || '—',
         <StatusBadge key="status" status={pick(r, ['status', 'Status']) ?? ''} />,
@@ -288,7 +289,7 @@ const buildReports = (isAdmin) => ({
         pick(r, ['retailerName', 'RetailerName']) ?? '',
         pick(r, ['username', 'Username']) ?? '',
         pick(r, ['QrName', 'qrName']) ?? '',
-        pick(r, ['remarks', 'Remarks']) ?? '',
+        qrRemarkText(r),
         Number(pick(r, ['amount', 'Amount']) ?? 0).toFixed(2),
         pick(r, ['utr', 'Utr', 'UTR']) ?? '',
         pick(r, ['status', 'Status']) ?? '',
@@ -369,14 +370,14 @@ const buildReports = (isAdmin) => ({
         <StatusBadge key="status" status={r.status} />,
         r.approvedTime ? new Date(r.approvedTime).toLocaleString() : '—',
         r.walletClosingBalance != null ? money(r.walletClosingBalance) : '—',
-        r.remarks || '—',
+        qrRemarkText(r) || '—',
       ],
       exportRow: (r) => [
         r.Id, new Date(r.createdTime).toLocaleString(), r.retailerName || '', r.username || '', r.QrName || '', r.Vpa || '',
         Number(r.Amount).toFixed(2), Number(r.charges).toFixed(2), Number(r.creditAmount).toFixed(2), r.UTR || '', r.status,
         r.approvedTime ? new Date(r.approvedTime).toLocaleString() : '',
         r.walletClosingBalance != null ? Number(r.walletClosingBalance).toFixed(2) : '',
-        r.remarks || '',
+        qrRemarkText(r),
       ],
       exportHeaders: ['ID', 'Time', 'Retailer', 'Retailer Mobile', 'Store', 'VPA', 'Amount', 'Charges', 'Credit Amount', 'UTR', 'Status', 'Approved Time', 'Closing Balance', 'Remarks'],
       exportWidths: [0.35, 1.3, 1, 0.95, 1.1, 1.4, 0.8, 0.7, 0.85, 0.8, 0.8, 1.3, 0.95, 1],
