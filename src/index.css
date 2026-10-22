@@ -3891,3 +3891,21 @@ body {
   .tp-head { margin-bottom: 10px; }
   .tp-page { padding-top: 14px; padding-bottom: 14px; }
 }
+/* HDFC payment-limit pop-up */
+.cc-alert { font-family: Inter, Manrope, sans-serif; animation: cc-alert-in .32s cubic-bezier(.22, 1, .36, 1) both; }
+.cc-alert-top { padding: 26px 24px 18px; background: linear-gradient(180deg, #FDECEC 0%, #FFF 100%); }
+.cc-alert-icon { position: relative; display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 20px; background: linear-gradient(145deg, #EF4444, #C81E1E); color: #fff; box-shadow: 0 14px 26px -12px rgba(220, 38, 38, .7); margin-bottom: 14px; }
+.cc-alert-ring { position: absolute; inset: 0; border-radius: 20px; border: 2px solid rgba(239, 68, 68, .55); animation: cc-alert-pulse 1.8s ease-out infinite; }
+.cc-alert-tag { display: block; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #B91C1C; margin-bottom: 4px; }
+.cc-alert-title { font-weight: 800; font-size: 21px; letter-spacing: -.01em; color: #111827; margin: 0; }
+.cc-alert-body { padding: 4px 24px 24px; }
+.cc-alert-cap { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 14px; background: #FEF2F2; border: 1.5px dashed #F5A3A3; margin-bottom: 14px; }
+.cc-alert-cap-label { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #B45454; }
+.cc-alert-cap-amount { font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: #D92D2D; line-height: 1.15; }
+.cc-alert-text { font-size: 13.5px; line-height: 1.55; color: #4A5568; margin: 0 0 18px; }
+.cc-alert-btn { width: 100%; height: 46px; border: none; border-radius: 13px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #EF4444, #D92D2D); box-shadow: 0 12px 22px -14px rgba(220, 38, 38, .8); transition: transform .15s ease, box-shadow .15s ease; }
+.cc-alert-btn:hover { transform: translateY(-1px); box-shadow: 0 16px 26px -14px rgba(220, 38, 38, .9); }
+.cc-alert-btn:active { transform: translateY(0); }
+@keyframes cc-alert-in { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes cc-alert-pulse { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.45); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cc-alert, .cc-alert-ring { animation: none; } }

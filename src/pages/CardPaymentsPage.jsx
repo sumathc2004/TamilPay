@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarClock, CheckCircle2, ChevronRight, CreditCard, Info, Lock, Search, ShieldCheck, Smartphone, X } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CheckCircle2, ChevronRight, CreditCard, Info, Lock, Search, ShieldCheck, Smartphone, TriangleAlert, X } from 'lucide-react';
 import { apiUrl } from '../utils/api';
 import { billerLogo } from '../utils/bankLogos';
+import Modal from '../components/Modal';
 
 // Avatar tints, all from the logo: the blues of "Tamil", the orange and amber of "pay".
 const AVATAR_TONES = [
@@ -139,6 +140,8 @@ const CardPaymentsPage = ({ onNavigate, user, onWalletChanged }) => {
   const [confirming, setConfirming] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(null);
+  // HDFC takes no payment above ₹49,999 — said once, in a pop-up, as soon as that bank is chosen.
+  const [hdfcAlert, setHdfcAlert] = useState(false);
 
   useEffect(() => {
     fetch(apiUrl('/api/bbps/billers?category=credit-card'))
@@ -179,6 +182,7 @@ const CardPaymentsPage = ({ onNavigate, user, onWalletChanged }) => {
     setPayNotice(null);
     setConfirming(false);
     setPaid(null);
+    setHdfcAlert(!!next && /hdfc/i.test(`${next.billerId} ${next.billerName}`));
     window.scrollTo?.({ top: 0, behavior: 'smooth' });
   };
 
@@ -351,6 +355,26 @@ const CardPaymentsPage = ({ onNavigate, user, onWalletChanged }) => {
               </div>
             )}
           </>
+        )}
+
+        {hdfcAlert && (
+          <Modal onClose={() => setHdfcAlert(false)} style={{ padding: 0, width: 380, maxWidth: '90vw', textAlign: 'center', overflow: 'hidden' }}>
+            <div className="cc-alert" role="alertdialog" aria-labelledby="hdfc-alert-title">
+              <div className="cc-alert-top">
+                <span className="cc-alert-icon"><i className="cc-alert-ring" aria-hidden="true" /><TriangleAlert size={30} strokeWidth={2.1} /></span>
+                <span className="cc-alert-tag">HDFC Credit Card</span>
+                <h2 id="hdfc-alert-title" className="cc-alert-title">Payment limit</h2>
+              </div>
+              <div className="cc-alert-body">
+                <div className="cc-alert-cap">
+                  <span className="cc-alert-cap-label">Maximum per payment</span>
+                  <span className="cc-alert-cap-amount">₹49,999</span>
+                </div>
+                <p className="cc-alert-text">HDFC will not accept a payment of more than ₹49,999. Please keep each payment at or below this amount.</p>
+                <button type="button" className="cc-alert-btn" autoFocus onClick={() => setHdfcAlert(false)}>Got it</button>
+              </div>
+            </div>
+          </Modal>
         )}
 
         {biller && (

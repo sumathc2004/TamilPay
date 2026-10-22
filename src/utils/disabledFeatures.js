@@ -6,6 +6,6 @@ export const PAY_OUT_DISABLED = false;
 
 // The Static QR tile on Home (Pay In). While it is true the tile is greyed out and not clickable.
 // Set it to false to turn it back on — the QR screens in Admin and the QR reports are not touched.
-export const STATIC_QR_DISABLED = true;
+export const STATIC_QR_DISABLED = false;
 
 export const DISABLED_PAGES = new Set(PAY_OUT_DISABLED ? ['imps', 'cardPayments'] : []);
