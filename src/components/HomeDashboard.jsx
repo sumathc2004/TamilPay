@@ -4,7 +4,7 @@ import { apiUrl } from '../utils/api';
 
 const money = (n) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const REFRESH_MS = 60_000;
+const REFRESH_MS = 30_000;
 
 /** The four dashboard numbers (pipe balance, wallet balance, wallets, difference) as a compact
  * strip at the top of Home. Admin only — the caller decides; this component just draws it. */
@@ -15,7 +15,7 @@ const HomeDashboard = ({ walletVersion }) => {
   useEffect(() => {
     let alive = true;
     const load = () => {
-      fetch(apiUrl('/api/dashboard'))
+      fetch(apiUrl('/api/dashboard'), { cache: 'no-store' })
         .then((res) => {
           if (!res.ok) throw new Error(`Request failed (${res.status})`);
           return res.json();
