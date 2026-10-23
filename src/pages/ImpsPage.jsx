@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ArrowLeft, CheckCircle2, ChevronRight, Download, Landmark, Plus, Receipt, RefreshCw, Search, Share2, Users, X,
+  CheckCircle2, ChevronRight, Download, Landmark, Plus, Receipt, RefreshCw, Search, Share2, Users, X,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { labelStyle, fieldErrorStyle } from '../styles/formStyles';
@@ -8,6 +8,7 @@ import { apiUrl } from '../utils/api';
 import { MASTER_CLIENT_ID } from '../utils/customer';
 import { loadImageAsDataUrl } from '../utils/pdf';
 import Modal from '../components/Modal';
+import BackButton from '../components/BackButton';
 import BankCombobox from '../components/BankCombobox';
 import tamilPayLogo from '../assets/images/tamilpay-logo.png';
 
@@ -105,7 +106,7 @@ const receiptBtnStyle = {
 // skips read-only fields) and become editable the moment the person focuses them.
 const unlockField = (e) => e.currentTarget.removeAttribute('readonly');
 
-const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
+const ImpsPage = ({ onBack, user, onWalletChanged }) => {
   const [step, setStep] = useState('input'); // 'input' | 'verified' | 'register'
   const [mobileNumber, setMobileNumber] = useState('');
   const [mobileError, setMobileError] = useState(null);
@@ -776,7 +777,7 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
       return;
     }
     if (step === 'input') {
-      onNavigate?.('home');
+      onBack?.('home');
       return;
     }
     resetToInput();
@@ -787,7 +788,7 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
       className="theme-blue"
       style={{
         position: 'relative',
-        minHeight: 'calc(100vh - 64px)',
+        minHeight: 'calc(100vh - var(--tp-bar, 92px))',
         overflow: 'hidden',
         background: '#ffffff',
       }}
@@ -821,17 +822,7 @@ const ImpsPage = ({ onNavigate, user, onWalletChanged }) => {
             display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap',
           }}
         >
-          <button
-            className="btn-ghost"
-            onClick={handleTopBack}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
-              cursor: 'pointer', color: '#7C8491', fontFamily: 'Inter, sans-serif', fontWeight: 600,
-              fontSize: 14, padding: 0, flexShrink: 0,
-            }}
-          >
-            <ArrowLeft size={16} /> Back
-          </button>
+          <BackButton onClick={handleTopBack} style={{ flexShrink: 0 }} />
 
           {step === 'verified' && sender && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontFamily: 'Inter, sans-serif', fontSize: 13 }}>

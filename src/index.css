@@ -3909,3 +3909,120 @@ body {
 @keyframes cc-alert-in { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes cc-alert-pulse { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.45); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cc-alert, .cc-alert-ring { animation: none; } }
+
+/* Side-rail item switched off (see WALLET_SETTLEMENT_NAV_DISABLED) */
+.app-sidebar-item--disabled, .app-sidebar-item--disabled:hover { opacity: .45; cursor: not-allowed; background: none; color: rgba(255, 255, 255, 0.7); transform: none; }
+.app-sidebar-item--disabled::before { display: none; }
+
+/* ---- Back button: a small soft-blue button, only as wide as its text ---- */
+.tp-back {
+  display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; width: fit-content; height: 32px;
+  padding: 0 13px 0 10px; border: 1px solid #DCE6F8; border-radius: 10px; background: #EEF3FD; cursor: pointer;
+  color: #0D4FB0; font: 600 13.5px 'Inter', sans-serif;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+.tp-back-icon { display: inline-flex; transition: transform 0.18s ease; }
+.tp-back:hover:not(:disabled) { background: #E1EBFC; border-color: #B9CCF0; box-shadow: 0 6px 14px -10px rgba(13, 79, 176, 0.6); }
+.tp-back:hover:not(:disabled) .tp-back-icon { transform: translateX(-3px); }
+.tp-back:active:not(:disabled) { transform: scale(0.96); }
+.tp-back:focus-visible { outline: 3px solid rgba(21, 101, 216, 0.28); outline-offset: 2px; }
+.tp-back:disabled { opacity: 0.55; cursor: default; }
+
+/* ---- Admin: tiles in three headed panels that share the screen ----
+   Overview & Reports takes the whole top row; QR and Manage split the bottom one. The panels
+   stretch to the height left under the title, so the page is full instead of a few tiles at the top. */
+.ad-board {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+  max-height: 680px;
+}
+.ad-panel {
+  display: flex; flex-direction: column; min-height: 0; padding: 16px 18px 18px;
+  border-radius: 22px; background: rgba(255, 255, 255, 0.62); border: 1px solid rgba(var(--theme-heading-rgb), 0.07);
+  box-shadow: 0 1px 2px rgba(var(--theme-heading-rgb), 0.04), 0 10px 26px -18px rgba(var(--theme-heading-rgb), 0.35);
+}
+.ad-panel--overview { grid-column: span 12; background: linear-gradient(135deg, rgba(234, 241, 254, 0.85), rgba(255, 255, 255, 0.7)); }
+.ad-panel--qr { grid-column: span 5; background: linear-gradient(135deg, rgba(254, 241, 232, 0.85), rgba(255, 255, 255, 0.7)); }
+.ad-panel--manage { grid-column: span 7; background: linear-gradient(135deg, rgba(252, 239, 201, 0.7), rgba(255, 255, 255, 0.7)); }
+.ad-panel-head { margin-bottom: 12px; }
+.ad-panel-title { margin: 0; font: 700 16px 'Inter', sans-serif; letter-spacing: -0.01em; color: var(--theme-heading); text-align: left; }
+.ad-panel-caption { margin: 2px 0 0; font: 400 12.5px 'Inter', sans-serif; color: #7C8491; text-align: left; }
+.ad-items { flex: 1; min-height: 0; display: grid; gap: 14px; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+.ad-items .rp-tile { min-height: 0; padding: 18px; gap: 14px; border-radius: 18px; }
+.ad-items .rp-tile-icon { width: 46px; height: 46px; border-radius: 14px; }
+.ad-items .rp-tile-title { font-size: 15.5px; }
+.ad-items .rp-tile-desc { font-size: 12.5px; line-height: 1.4; }
+.ad-items .rp-tile-arrow { top: 16px; right: 16px; }
+
+/* Narrower screens, or with the dashboard summary open beside it: one panel per row, tiles reflow. */
+@media (max-width: 1100px) {
+  .ad-board { grid-template-rows: none; max-height: none; }
+  .ad-panel--overview, .ad-panel--qr, .ad-panel--manage { grid-column: span 12; }
+  .ad-items { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .ad-items .rp-tile { min-height: 140px; }
+}
+.ad-board.is-split { grid-template-rows: none; max-height: none; }
+.ad-board.is-split .ad-panel--overview, .ad-board.is-split .ad-panel--qr, .ad-board.is-split .ad-panel--manage { grid-column: span 12; }
+.ad-board.is-split .ad-items { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.ad-board.is-split .ad-items .rp-tile { min-height: 140px; }
+@media (max-width: 520px) {
+  .ad-items { grid-template-columns: 1fr; }
+  .ad-items .rp-tile { min-height: 0; }
+}
+
+/* ---- Admin polish: accent colours per panel, filled icons, accent bar on each tile ---- */
+.ad-panel { --ad-accent: #1565D8; position: relative; overflow: hidden; }
+.ad-panel--qr { --ad-accent: #F26A1B; }
+.ad-panel--manage { --ad-accent: #1565D8; }
+.ad-panel::before {
+  content: ''; position: absolute; top: -90px; right: -70px; width: 260px; height: 260px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ad-accent) 16%, transparent), transparent 68%);
+}
+.ad-panel > * { position: relative; }
+.ad-panel-head { display: flex; align-items: center; gap: 12px; }
+.ad-panel-icon {
+  display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; color: #fff;
+  background: linear-gradient(145deg, var(--ad-accent), color-mix(in srgb, var(--ad-accent) 72%, #0B1F4D));
+  box-shadow: 0 10px 18px -10px color-mix(in srgb, var(--ad-accent) 80%, transparent);
+}
+.ad-panel-text { flex: 1; min-width: 0; }
+.ad-panel-title { color: color-mix(in srgb, var(--ad-accent) 55%, #0B1F4D); font-size: 17px; }
+
+.ad-items .rp-tile {
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--rp-fg) 14%, #E4E9F2);
+  box-shadow: inset 0 3px 0 var(--rp-fg), 0 1px 2px rgba(var(--theme-heading-rgb), 0.05), 0 14px 26px -20px color-mix(in srgb, var(--rp-fg) 55%, transparent);
+}
+.ad-items .rp-tile:hover {
+  box-shadow: inset 0 3px 0 var(--rp-fg), 0 1px 2px rgba(var(--theme-heading-rgb), 0.05), 0 22px 34px -20px color-mix(in srgb, var(--rp-fg) 75%, transparent);
+}
+.ad-items .rp-tile-icon {
+  width: 50px; height: 50px; border-radius: 16px; color: #fff;
+  background: linear-gradient(145deg, var(--rp-fg), color-mix(in srgb, var(--rp-fg) 72%, #0B1F4D));
+  box-shadow: 0 12px 20px -10px color-mix(in srgb, var(--rp-fg) 75%, transparent);
+}
+.ad-items .rp-tile-title { font-size: 16px; color: #0B1F4D; }
+.ad-items .rp-tile-desc { color: #6B7280; }
+.ad-items .rp-tile-arrow { background: color-mix(in srgb, var(--rp-fg) 10%, #fff); color: var(--rp-fg); opacity: 1; }
+
+
+/* ---- Logo colours only: the blue of "Tamil" and the orange of "pay" ----
+   Tiles alternate blue / orange; icons are bright gradients of those two, not darkened (which turned the
+   orange brown). The Reports menu uses the same tile style on one grid. */
+.ad-items .rp-tile:nth-child(odd) { --rp-bg: #EAF1FE; --rp-fg: #1565D8; --rp-g1: #2E8AF0; --rp-g2: #1565D8; }
+.ad-items .rp-tile:nth-child(even) { --rp-bg: #FEF1E8; --rp-fg: #F26A1B; --rp-g1: #FF8F4A; --rp-g2: #F26A1B; }
+.ad-items .rp-tile-icon { background: linear-gradient(145deg, var(--rp-g1), var(--rp-g2)); }
+.ad-panel { --ad-g1: #2E8AF0; --ad-g2: #1565D8; }
+.ad-panel--qr { --ad-g1: #FF8F4A; --ad-g2: #F26A1B; }
+.ad-panel-icon { background: linear-gradient(145deg, var(--ad-g1), var(--ad-g2)); }
+.ad-panel-title { color: var(--theme-heading); }
+
+/* ---- Reports menu: the original soft tiles (pastel icon, chevron chip), in the logo's blue and orange only ---- */
+.rp-grid--logo .rp-tile:nth-child(odd) { --rp-bg: #EAF1FE; --rp-fg: #1565D8; }
+.rp-grid--logo .rp-tile:nth-child(even) { --rp-bg: #FEF1E8; --rp-fg: #F26A1B; }
+.rp-grid--logo .rp-tile { min-height: 190px; }
+/* Two lines reserved for the description, so every title sits at the same height. */
+.rp-grid--logo .rp-tile-desc { min-height: 2.9em; }

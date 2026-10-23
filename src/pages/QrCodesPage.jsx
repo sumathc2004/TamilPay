@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, QrCode, RefreshCw } from 'lucide-react';
 import Modal from '../components/Modal';
+import BackButton from '../components/BackButton';
 import { apiUrl } from '../utils/api';
 import { MASTER_CLIENT_ID } from '../utils/customer';
 import { pick } from '../utils/pick';
@@ -31,7 +32,7 @@ const formatCharge = (type, value) => (type === 'PERCENT' ? `${value}%` : `₹${
  * assumed — the columns below mirror what Qr/Insert accepts, since a freshly
  * inserted row almost certainly carries those same fields back out.
  */
-const QrCodesPage = () => {
+const QrCodesPage = ({ onBack }) => {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -104,8 +105,9 @@ const QrCodesPage = () => {
   };
 
   return (
-    <div className="theme-purple" style={{ position: 'relative', minHeight: 'calc(100vh - 64px)', background: 'transparent' }}>
+    <div className="theme-purple" style={{ position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', background: 'transparent' }}>
       <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(20px, 4vw, 32px)' }}>
+        <div style={{ marginBottom: 14 }}><BackButton onClick={() => onBack?.('admin')} /></div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--theme-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

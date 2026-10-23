@@ -13,7 +13,7 @@ const rupees = (v) => `₹${Number(v ?? 0).toLocaleString('en-IN', { minimumFrac
  * balances and the PG commission on each, and a form to map another retailer. Table on the left and
  * the form beside it on a wide screen; the form first and the rows as cards on a phone.
  */
-const DistributorMappingPage = ({ onNavigate, navParams, user }) => {
+const DistributorMappingPage = ({ onBack, navParams, user }) => {
   const customerId = navParams?.customerId;
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
 
@@ -105,7 +105,7 @@ const DistributorMappingPage = ({ onNavigate, navParams, user }) => {
       <div className="cu-inner">
         <header className="cu-head">
           <div className="cu-head-text">
-            <button type="button" className="cu-back" onClick={() => onNavigate?.('customers')} aria-label="Back to customers">
+            <button type="button" className="cu-back" onClick={() => onBack?.(navParams?.from === 'admin' ? 'admin' : 'customers')} aria-label="Back">
               <ArrowLeft size={18} />
             </button>
             <div>

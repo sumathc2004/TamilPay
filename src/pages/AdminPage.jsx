@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowLeftRight, ChevronRight, ClipboardList, CreditCard, LayoutDashboard, Megaphone, Network, QrCode, SlidersHorizontal, Users } from 'lucide-react';
+import { ArrowLeftRight, BookOpen, ChevronRight, ClipboardList, CreditCard, LayoutDashboard, Megaphone, Network, QrCode, Settings } from 'lucide-react';
 import { apiUrl } from '../utils/api';
 import DistributorsModal from '../components/DistributorsModal';
+import BackButton from '../components/BackButton';
 
 // Landing spot for admin-only tools. Customers navigates to its own page as
 // before; Dashboard stays right here and renders its summary alongside the
 // tiles instead of navigating away.
 // Same tile style as the Reports menu (.rp-grid / .rp-tile in index.css).
-const AdminPage = ({ onNavigate, walletVersion }) => {
+const AdminPage = ({ onNavigate, onBack, walletVersion }) => {
   const [showDashboard, setShowDashboard] = useState(false);
   const [showDistributors, setShowDistributors] = useState(false);
   const [dashboard, setDashboard] = useState(null);
@@ -38,8 +39,36 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
       .catch((err) => setExplainError(err.message));
   }, [showDashboard, walletVersion]);
 
+  // The same tiles as before, grouped so each group has a heading and the page fills the screen.
+  const groups = [
+    {
+      key: 'overview', Icon: LayoutDashboard, title: 'Overview & Reports', caption: 'Balances, and every retailer\'s reports in one place', tone: 0,
+      items: [
+        ['Dashboard', 'Wallet and payment pipe balances at a glance', LayoutDashboard, () => setShowDashboard(true)],
+        ['Admin Ledger Report', "Any retailer's wallet ledger over a date range", BookOpen, () => onNavigate?.('reports', { report: 'adminLedger' })],
+        ['Admin IMPS Report', "Every retailer's IMPS transfers, client-wide", ArrowLeftRight, () => onNavigate?.('reports', { report: 'adminImpsReport' })],
+        ['Admin PG Report', "Every retailer's PG links, client-wide", CreditCard, () => onNavigate?.('reports', { report: 'adminPgReport' })],
+        ['Admin QR Report', "Every retailer's QR collect requests, client-wide", QrCode, () => onNavigate?.('reports', { report: 'adminQrReport' })],
+      ],
+    },
+    {
+      key: 'qr', Icon: QrCode, title: 'QR', caption: 'Static QR codes and the requests made against them', tone: 1,
+      items: [
+        ['QR', 'Create and manage static QR codes', QrCode, () => onNavigate?.('qrCodes')],
+        ['QR Requests', 'Approve or reject collect requests', ClipboardList, () => onNavigate?.('qrRequests')],
+      ],
+    },
+    {
+      key: 'manage', Icon: Settings, title: 'Manage', caption: 'What every customer sees, and who distributes', tone: 2,
+      items: [
+        ['Announcements', 'Post updates every customer sees', Megaphone, () => onNavigate?.('announcements')],
+        ['Distributors', 'Add and manage distributors', Network, () => setShowDistributors(true)],
+      ],
+    },
+  ];
+
   return (
-    <div className="theme-purple" style={{ position: 'relative', minHeight: 'calc(100vh - 64px)', overflow: 'hidden', background: 'transparent' }}>
+    <div className="theme-purple" style={{ position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', overflow: 'hidden', background: 'transparent' }}>
       <div
         style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -48,45 +77,43 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
         }}
       />
 
-      <div style={{ position: 'relative', zIndex: 2, padding: '20px clamp(16px, 5vw, 80px)' }}>
-        <button
-          className="btn-ghost"
-          onClick={() => onNavigate?.('home')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
-            cursor: 'pointer', color: '#7C8491', fontFamily: 'Inter, sans-serif', fontWeight: 600,
-            fontSize: 14, padding: 0, marginBottom: 20,
-          }}
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+      <div style={{ position: 'relative', zIndex: 2, boxSizing: 'border-box', minHeight: 'calc(100vh - var(--tp-bar, 92px))', display: 'flex', flexDirection: 'column', padding: '16px clamp(16px, 3vw, 40px) 20px' }}>
+        {/* Back and the title share one line, so the tiles start higher and the page fits without scrolling. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+          <BackButton onClick={() => onBack?.('home')} />
+          <div>
+            <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 22, letterSpacing: '-0.015em', color: 'var(--theme-heading)', margin: 0, lineHeight: 1.15 }}>
+              Admin
+            </h1>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12.5, color: '#7C8491', margin: '2px 0 0' }}>Reports, QR codes and the tools that run TamilPay</p>
+          </div>
+        </div>
 
-        <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 20, color: 'var(--theme-heading)', margin: '0 0 20px' }}>
-          Admin
-        </h1>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 28 }}>
-          {/* Tiles */}
-          <div className="rp-grid" style={{ flex: '1 1 520px', minWidth: 0 }}>
-            {[
-              ['Customers', 'Add and manage retailers and their wallets', Users, () => onNavigate?.('customers')],
-              ['Dashboard', 'Wallet and payment pipe balances at a glance', LayoutDashboard, () => setShowDashboard(true)],
-              ['PG Settings', 'Payment gateway charges and settlement', SlidersHorizontal, () => onNavigate?.('pgsettings')],
-              ['IMPS Report', "Every retailer's IMPS transfers", ArrowLeftRight, () => onNavigate?.('reports', { report: 'adminImpsReport' })],
-              ['PG Report', "Every retailer's payment gateway links", CreditCard, () => onNavigate?.('reports', { report: 'adminPgReport' })],
-              ['QR', 'Create and manage static QR codes', QrCode, () => onNavigate?.('qrCodes')],
-              ['QR Requests', 'Approve or reject collect requests', ClipboardList, () => onNavigate?.('qrRequests')],
-              ['Announcements', 'Post updates every customer sees', Megaphone, () => onNavigate?.('announcements')],
-              ['Distributors', 'Add and manage distributors', Network, () => setShowDistributors(true)],
-            ].map(([label, description, Icon, onClick], i) => (
-              <button key={label} type="button" className={`rp-tile rp-tone-${i % 4}`} style={{ '--i': i }} onClick={onClick}>
-                <span className="rp-tile-icon"><Icon size={22} strokeWidth={2} /></span>
-                <span className="rp-tile-text">
-                  <span className="rp-tile-title">{label}</span>
-                  <span className="rp-tile-desc">{description}</span>
-                </span>
-                <ChevronRight className="rp-tile-arrow" size={18} />
-              </button>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 28 }}>
+          {/* Tiles, in four groups that share the screen between them */}
+          <div className={`ad-board${showDashboard ? ' is-split' : ''}`} style={{ flex: '1 1 520px', minWidth: 0 }}>
+            {groups.map((group) => (
+              <section key={group.key} className={`ad-panel ad-panel--${group.key}`}>
+                <div className="ad-panel-head">
+                  <span className="ad-panel-icon"><group.Icon size={19} strokeWidth={2.1} /></span>
+                  <div className="ad-panel-text">
+                    <h2 className="ad-panel-title">{group.title}</h2>
+                    <p className="ad-panel-caption">{group.caption}</p>
+                  </div>
+                </div>
+                <div className="ad-items" style={{ '--cols': group.items.length }}>
+                  {group.items.map(([label, description, Icon, onClick], i) => (
+                    <button key={label} type="button" className={`rp-tile rp-tone-${(i + group.tone) % 4}`} style={{ '--i': i + group.tone }} onClick={onClick}>
+                      <span className="rp-tile-icon"><Icon size={22} strokeWidth={2} /></span>
+                      <span className="rp-tile-text">
+                        <span className="rp-tile-title">{label}</span>
+                        <span className="rp-tile-desc">{description}</span>
+                      </span>
+                      <ChevronRight className="rp-tile-arrow" size={18} />
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
 
@@ -217,7 +244,7 @@ const AdminPage = ({ onNavigate, walletVersion }) => {
           )}
         </div>
       </div>
-      {showDistributors && <DistributorsModal onClose={() => setShowDistributors(false)} />}
+      {showDistributors && <DistributorsModal onClose={() => setShowDistributors(false)} onNavigate={onNavigate} />}
     </div>
   );
 };

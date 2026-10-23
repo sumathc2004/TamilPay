@@ -1211,12 +1211,12 @@ const PaymentGatewaySection = ({ clientId }) => {
 
 /** Admin > PG Settings — sidebar menu shell. Sections get added to SECTIONS above as
  * they're built; the shell itself doesn't need to change. */
-const PgSettingsPage = ({ onNavigate, user }) => {
+const PgSettingsPage = ({ onBack, user }) => {
   const [activeSection, setActiveSection] = useState(SECTIONS[0].key);
   const active = SECTIONS.find((s) => s.key === activeSection);
 
   return (
-    <div style={{ position: 'relative', minHeight: 'calc(100vh - 64px)', background: 'transparent' }}>
+    <div style={{ position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', background: 'transparent' }}>
       <div
         style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -1231,7 +1231,7 @@ const PgSettingsPage = ({ onNavigate, user }) => {
           position: sticky to stay put within view as that single scrollbar moves, instead
           of being wrapped in its own separate scroll container (which produced a second,
           redundant scrollbar alongside the page's). */}
-      <div className="sidebar-shell-row" style={{ position: 'relative', zIndex: 2, minHeight: 'calc(100vh - 64px)' }}>
+      <div className="sidebar-shell-row" style={{ position: 'relative', zIndex: 2, minHeight: 'calc(100vh - var(--tp-bar, 92px))' }}>
         {/* Sidebar menu — sticky under the navbar, flush left, square corners */}
         <div
           className="sidebar-shell-sidebar"
@@ -1239,7 +1239,7 @@ const PgSettingsPage = ({ onNavigate, user }) => {
             background: '#0D4FB0',
             padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4,
             position: 'sticky', top: 64, alignSelf: 'flex-start',
-            minHeight: 'calc(100vh - 64px)',
+            minHeight: 'calc(100vh - var(--tp-bar, 92px))',
           }}
         >
           <p
@@ -1274,7 +1274,7 @@ const PgSettingsPage = ({ onNavigate, user }) => {
           <button
             type="button"
             className="btn-ghost"
-            onClick={() => onNavigate?.('admin')}
+            onClick={() => onBack?.('admin')}
             style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12,
               background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%',
@@ -1282,7 +1282,7 @@ const PgSettingsPage = ({ onNavigate, user }) => {
             }}
           >
             <ArrowLeft size={17} />
-            Back to Admin
+            Back
           </button>
         </div>
 

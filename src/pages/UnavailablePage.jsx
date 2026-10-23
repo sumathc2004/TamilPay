@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowLeft, Ban } from 'lucide-react';
 
 /** Shown in place of a page that has been switched off (see utils/disabledFeatures.js). */
-const UnavailablePage = ({ onNavigate }) => (
+const UnavailablePage = ({ onNavigate, onBack }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 16px' }}>
     <div style={{ maxWidth: 420, textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
       <span style={{ display: 'inline-flex', width: 64, height: 64, alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: '#F3F7FD', color: '#7C8491', marginBottom: 14 }}>
@@ -12,8 +12,8 @@ const UnavailablePage = ({ onNavigate }) => (
       <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 20px', lineHeight: 1.55 }}>
         This service is switched off right now. Your earlier payments are still in Reports.
       </p>
-      <button type="button" className="signin-btn" onClick={() => onNavigate?.('home')} style={{ height: 42, padding: '0 20px' }}>
-        <ArrowLeft size={16} /> Back to Home
+      <button type="button" className="signin-btn" onClick={() => (onBack ? onBack('home') : onNavigate?.('home'))} style={{ height: 42, padding: '0 20px' }}>
+        <ArrowLeft size={16} /> Back
       </button>
     </div>
   </div>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Eye, EyeOff, KeyRound, Mail, Phone, ShieldCheck, Store, UserRound, Wallet } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Mail, Phone, ShieldCheck, Store, UserRound, Wallet } from 'lucide-react';
 import { apiUrl } from '../utils/api';
 import { fieldErrorStyle, labelStyle } from '../styles/formStyles';
+import BackButton from '../components/BackButton';
 
 const cardStyle = {
   background: 'rgba(255,255,255,0.96)',
@@ -64,7 +65,7 @@ const cancelStyle = { background: 'none', border: 'none', cursor: 'pointer', col
  * and Change PIN. The remote changes password and PIN together in one call, so each form
  * sends the value it is not changing as both the old and the new one.
  */
-const ProfilePage = ({ user, onNavigate }) => {
+const ProfilePage = ({ user, onBack }) => {
   const [customer, setCustomer] = useState(null);
   const [wallet, setWallet] = useState(null);
 
@@ -142,12 +143,7 @@ const ProfilePage = ({ user, onNavigate }) => {
 
   return (
     <div className="theme-purple" style={{ padding: '14px clamp(16px, 3vw, 32px) 28px' }}>
-      <button
-        type="button" className="btn-ghost" onClick={() => onNavigate?.('home')}
-        style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#7C8491', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, padding: 0, marginBottom: 12 }}
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <BackButton onClick={() => onBack?.('home')} style={{ marginBottom: 12 }} />
 
       <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 'clamp(20px, 3vw, 26px)', color: 'var(--theme-heading)', margin: '0 0 16px' }}>
         My Profile

@@ -100,7 +100,7 @@ const WalletSettlementPage = ({ user, walletVersion, onWalletChanged, onNavigate
   }, [user?.walletId, walletVersion]);
 
   return (
-    <div style={{ position: 'relative', minHeight: 'calc(100vh - 64px)', background: 'transparent' }}>
+    <div style={{ position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', background: 'transparent' }}>
       <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(20px, 4vw, 32px)', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 19, color: '#0D4FB0', margin: 0 }}>
           Wallet & Settlement

@@ -54,7 +54,7 @@ const TabStrip = ({ items, activeId, idKey, labelKey, onSelect }) => (
 // Groups down the left; picking one reveals Settlement → Category → PG on the right,
 // all progressively revealed on this one page — matches PgSettings/Pg/SelectByWallet's
 // flat one-row-per-Group×Settlement×PG shape, which we group client-side as the user drills in.
-const PgPaymentPage = ({ onNavigate, user }) => {
+const PgPaymentPage = ({ onBack, user }) => {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
   const [groupId, setGroupId] = useState(null);
@@ -272,7 +272,7 @@ const PgPaymentPage = ({ onNavigate, user }) => {
   };
 
   return (
-    <div className="theme-green" style={{ position: 'relative', minHeight: 'calc(100vh - 64px)', background: 'transparent' }}>
+    <div className="theme-green" style={{ position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', background: 'transparent' }}>
       <div
         style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
@@ -283,7 +283,7 @@ const PgPaymentPage = ({ onNavigate, user }) => {
 
       {/* No padding/gap here — the sidebar sits flush against the navbar and the left
           edge, matching the Admin > PG Settings sidebar shell. */}
-      <div className="sidebar-shell-row" style={{ position: 'relative', zIndex: 2, minHeight: 'calc(100vh - 64px)' }}>
+      <div className="sidebar-shell-row" style={{ position: 'relative', zIndex: 2, minHeight: 'calc(100vh - var(--tp-bar, 92px))' }}>
         {/* Sidebar menu — Groups, sticky under the navbar */}
         <div
           className="sidebar-shell-sidebar"
@@ -291,7 +291,7 @@ const PgPaymentPage = ({ onNavigate, user }) => {
             background: 'var(--theme-heading)',
             padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4,
             position: 'sticky', top: 64, alignSelf: 'flex-start',
-            minHeight: 'calc(100vh - 64px)',
+            minHeight: 'calc(100vh - var(--tp-bar, 92px))',
           }}
         >
           <p
@@ -326,7 +326,7 @@ const PgPaymentPage = ({ onNavigate, user }) => {
           <button
             type="button"
             className="btn-ghost"
-            onClick={() => onNavigate?.('home')}
+            onClick={() => onBack?.('home')}
             style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12,
               background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%',
@@ -334,7 +334,7 @@ const PgPaymentPage = ({ onNavigate, user }) => {
             }}
           >
             <ArrowLeft size={17} />
-            Back to Home
+            Back
           </button>
         </div>
 

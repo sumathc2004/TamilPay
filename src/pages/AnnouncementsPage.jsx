@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Megaphone, Pencil, Plus } from 'lucide-react';
+import { Megaphone, Pencil, Plus } from 'lucide-react';
 import { apiUrl } from '../utils/api';
 import { fetchAllAnnouncements, formatAnnouncementTime } from '../utils/announcements';
 import { fieldErrorStyle, labelStyle } from '../styles/formStyles';
 import '../styles/announcements.css';
+import BackButton from '../components/BackButton';
 
 const heading = {
   display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 16px',
@@ -17,7 +18,7 @@ const EMPTY = { id: null, title: '', message: '', isActive: true };
  * active ones (daily popup and the home banner). The remote has no delete, so "off" is how
  * an announcement is withdrawn.
  */
-const AnnouncementsPage = ({ user, onNavigate }) => {
+const AnnouncementsPage = ({ user, onNavigate, onBack }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
 
   const [items, setItems] = useState([]);
@@ -101,12 +102,7 @@ const AnnouncementsPage = ({ user, onNavigate }) => {
 
   return (
     <div className="theme-purple" style={{ padding: '14px clamp(16px, 3vw, 32px) 28px' }}>
-      <button
-        type="button" className="btn-ghost" onClick={() => onNavigate?.('admin')}
-        style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#7C8491', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, padding: 0, marginBottom: 12 }}
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+      <BackButton onClick={() => onBack?.('admin')} style={{ marginBottom: 12 }} />
 
       <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 'clamp(20px, 3vw, 26px)', color: 'var(--theme-heading)', margin: '0 0 16px' }}>
         Announcements

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowLeftRight, BookOpen, ChevronRight, CreditCard, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, RefreshCw, Undo2, WalletCards, X } from 'lucide-react';
+import { ArrowLeftRight, BookOpen, ChevronRight, CreditCard, HandCoins, Landmark, ScanQrCode, Wallet, FileSpreadsheet, FileText, Printer, QrCode, Receipt, Search, Share2, Download, RefreshCw, Undo2, WalletCards, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { buildXlsx } from '../utils/xlsx';
 import { apiUrl } from '../utils/api';
@@ -12,6 +12,7 @@ import { MASTER_CLIENT_ID } from '../utils/customer';
 import { pick } from '../utils/pick';
 import { qrRemarkText } from '../utils/qrRemarks';
 import tamilPayLogo from '../assets/images/tamilpay-logo.png';
+import BackButton from '../components/BackButton';
 
 // toISOString() reports the UTC date, which drifts a calendar day off the user's own
 // "today" depending on timezone and time of day — built from local date parts instead
@@ -455,7 +456,20 @@ const StatusBadge = ({ status }) => {
 };
 
 /** Reports menu ('menu' step), each report keyed by buildReports() above, sharing one date-ranged view with PDF/CSV export. */
-const ReportsPage = ({ onNavigate, user, navParams }) => {
+// The admin reports live on the Admin page now, not in this menu. They stay defined here, and open
+// through a deep link from Admin, because the report screen itself is shared.
+// The icon each tile wears on the menu (the report screens keep their own).
+const MENU_ICONS = {
+  transfer: Landmark,
+  pgReports: HandCoins,
+  cardReports: CreditCard,
+  ledger: Wallet,
+  qrReports: ScanQrCode,
+};
+
+const ADMIN_REPORT_KEYS = new Set(['adminLedger', 'adminImpsReport', 'adminQrReport', 'adminPgReport']);
+
+const ReportsPage = ({ onBack, user, navParams }) => {
   const isAdmin = (user?.roleName || '').toLowerCase() === 'admin';
   // Built once per role, not per render: a fresh object every render made `report` look new to
   // every effect that depends on it, which re-ran them endlessly (the customer list was being
@@ -868,7 +882,8 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
         className="theme-purple rp-page"
         style={{
           position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', overflow: 'hidden', background: 'transparent',
-          ...(report ? { height: 'calc(100vh - var(--tp-bar, 92px))', display: 'flex', flexDirection: 'column' } : {}),
+          display: 'flex', flexDirection: 'column',
+          ...(report ? { height: 'calc(100vh - var(--tp-bar, 92px))' } : {}),
         }}
       >
       <div
@@ -879,47 +894,44 @@ const ReportsPage = ({ onNavigate, user, navParams }) => {
         }}
       />
 
-      <div className="rp-inner" style={{ position: 'relative', zIndex: 2, padding: '14px clamp(16px, 3vw, 32px) 20px', ...(report ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
-        <button
-          className="btn-ghost"
-          onClick={() => (scopedCustomer ? onNavigate?.('customers') : step === 'menu' ? onNavigate?.('home') : setStep('menu'))}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
-            cursor: 'pointer', color: '#7C8491', fontFamily: 'Inter, sans-serif', fontWeight: 600,
-            fontSize: 14, padding: 0, marginBottom: 12,
-          }}
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
-
-        {step === 'menu' && (
-          <div>
-            <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 'clamp(20px, 3vw, 26px)', color: 'var(--theme-heading)', margin: '0 0 4px' }}>
+      <div className="rp-inner" style={{ position: 'relative', zIndex: 2, padding: '16px clamp(16px, 3vw, 40px) 20px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* On the menu, Back and the title share a line (like Admin); inside a report it stands alone. */}
+        {step === 'menu' ? (
+          <div style={{ marginBottom: 22 }}>
+            <BackButton onClick={() => (scopedCustomer ? onBack?.('customers') : onBack?.('home'))} style={{ marginBottom: 14 }} />
+            <h1 style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: 'clamp(24px, 3vw, 30px)', letterSpacing: '-0.02em', color: 'var(--theme-heading)', margin: '0 0 4px', lineHeight: 1.15 }}>
               Reports
             </h1>
-            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#7C8491', margin: '0 0 18px' }}>
-              Pick a report, then choose a date range.
-            </p>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 14.5, color: '#7C8491', margin: 0 }}>Pick a report, then choose a date range.</p>
+          </div>
+        ) : (
+          <BackButton
+            onClick={() => (scopedCustomer ? onBack?.('customers') : ADMIN_REPORT_KEYS.has(step) ? onBack?.('admin') : setStep('menu'))}
+            style={{ marginBottom: 12 }}
+          />
+        )}
 
-            {/* Even grid of tiles that reflows with the screen width (see .rp-grid in index.css). */}
-            <div className="rp-grid">
-              {Object.entries(REPORTS).map(([key, r], i) => (
+        {step === 'menu' && (
+          <div className="rp-grid rp-grid--logo">
+            {Object.entries(REPORTS).filter(([key]) => !ADMIN_REPORT_KEYS.has(key)).map(([key, r], i) => {
+              const TileIcon = MENU_ICONS[key] ?? r.icon;
+              return (
                 <button
                   key={key}
                   type="button"
-                  className={`rp-tile rp-tone-${i % 4}`}
+                  className="rp-tile"
                   style={{ '--i': i }}
                   onClick={() => openReport(key)}
                 >
-                  <span className="rp-tile-icon"><r.icon size={22} strokeWidth={2} /></span>
+                  <span className="rp-tile-icon"><TileIcon size={24} strokeWidth={2} /></span>
                   <span className="rp-tile-text">
                     <span className="rp-tile-title">{r.label}</span>
                     <span className="rp-tile-desc">{r.description}</span>
                   </span>
                   <ChevronRight className="rp-tile-arrow" size={18} />
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
 

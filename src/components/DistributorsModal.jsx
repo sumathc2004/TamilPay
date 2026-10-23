@@ -9,10 +9,10 @@ const isDistributor = (c) => /^distributors?$/i.test((c.roleName || '').trim());
 
 /**
  * Admin > Distributors: everyone on the client whose role is Distributors. They are kept out of
- * the Customers page, so this is where they are listed. (More will be added here once the
- * distributor API is connected.)
+ * the Customers page, so this is where they are listed. Each one has a View mapping button, which
+ * opens the page where their retailers are listed and more can be mapped.
  */
-const DistributorsModal = ({ onClose }) => {
+const DistributorsModal = ({ onClose, onNavigate }) => {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
 
@@ -50,12 +50,22 @@ const DistributorsModal = ({ onClose }) => {
       {rows && rows.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '55vh', overflowY: 'auto' }}>
           {rows.map((c) => (
-            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F3F7FD', border: '1px solid rgba(var(--theme-heading-rgb),0.08)', borderRadius: 12, padding: '10px 14px', fontFamily: 'Inter, sans-serif' }}>
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, background: '#F3F7FD', border: '1px solid rgba(var(--theme-heading-rgb),0.08)', borderRadius: 12, padding: '10px 14px', fontFamily: 'Inter, sans-serif' }}>
               <Avatar name={c.FULL_NAME} size={36} />
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: '1 1 140px' }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#0D4FB0' }}>{c.FULL_NAME}</p>
                 <p style={{ margin: '2px 0 0', fontSize: 12.5, color: '#6B7280' }}>+91 {c.MOBILE_NUMBER}{c.STORE_NAME ? ` · ${c.STORE_NAME}` : ''}</p>
               </div>
+              {c.username ? (
+                <button
+                  type="button" className="cu-chip-btn cu-chip-btn--blue"
+                  onClick={() => { onClose(); onNavigate?.('distributorMapping', { customerId: c.id, from: 'admin' }); }}
+                >
+                  <Network size={13} /> View mapping
+                </button>
+              ) : (
+                <span style={{ fontSize: 12, color: '#8A93A4' }} title="A wallet has to be added first">No wallet yet</span>
+              )}
             </div>
           ))}
         </div>

@@ -64,7 +64,7 @@ const TransactionsPage = ({ user }) => {
   const isToday = fromDate === todayIso() && toDate === todayIso();
 
   return (
-    <div style={{ position: 'relative', minHeight: 'calc(100vh - 64px)', background: 'transparent' }}>
+    <div style={{ position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', background: 'transparent' }}>
       <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(20px, 4vw, 32px)' }}>
         <div style={{ ...cardStyle, maxWidth: 'none', padding: '16px clamp(16px, 3vw, 24px)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>

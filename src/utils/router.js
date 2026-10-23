@@ -32,6 +32,8 @@ const PATH_TO_PAGE = Object.fromEntries(
 const REPORT_SLUGS = {
   adminImpsReport: 'admin-imps',
   adminPgReport: 'admin-pg',
+  adminLedger: 'admin-ledger',
+  adminQrReport: 'admin-qr',
 };
 const SLUG_TO_REPORT = Object.fromEntries(
   Object.entries(REPORT_SLUGS).map(([report, slug]) => [slug, report]),

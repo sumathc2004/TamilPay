@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, IdCard, KeyRound, MapPin, Pencil, Phone, Trash2, X } from 'lucide-react';
+import { IdCard, KeyRound, MapPin, Pencil, Phone, Trash2, X } from 'lucide-react';
 import { labelStyle, fieldErrorStyle } from '../styles/formStyles';
 import { getCustomerId, MASTER_CLIENT_ID } from '../utils/customer';
 import { apiUrl } from '../utils/api';
@@ -9,6 +9,7 @@ import { todayIso } from '../utils/dates';
 import ViewRow from '../components/ViewRow';
 import Modal from '../components/Modal';
 import ResetPasswordModal from '../components/ResetPasswordModal';
+import BackButton from '../components/BackButton';
 
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const AADHAAR_PATTERN = /^\d{12}$/;
@@ -83,7 +84,7 @@ const Field = ({ label, error, children }) => (
 
 const pageWrapStyle = {
   position: 'relative',
-  minHeight: 'calc(100vh - 64px)',
+  minHeight: 'calc(100vh - var(--tp-bar, 92px))',
   overflow: 'hidden',
   background: '#ffffff',
 };
@@ -104,7 +105,7 @@ const backgroundSwooshStyle = {
  * Backed entirely by the remote Client/Customer API (see backend CustomersController).
  * navParams: { customerId?, mode: 'view'|'edit'|'create' }.
  */
-const CustomerDetailPage = ({ onNavigate, navParams }) => {
+const CustomerDetailPage = ({ onNavigate, onBack, navParams }) => {
   const customerId = navParams?.customerId ?? null;
   const [mode, setMode] = useState(navParams?.mode ?? (customerId ? 'view' : 'create'));
 
@@ -285,16 +286,7 @@ const CustomerDetailPage = ({ onNavigate, navParams }) => {
   };
 
   const backButton = (
-    <button
-      className="btn-ghost"
-      onClick={() => onNavigate('customers')}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer',
-        color: '#7C8491', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, padding: 0, marginBottom: 20,
-      }}
-    >
-      <ArrowLeft size={16} /> Back to Customers
-    </button>
+    <BackButton onClick={() => onBack?.('customers')} style={{ marginBottom: 20 }} />
   );
 
   const isFormMode = mode === 'edit' || mode === 'create';

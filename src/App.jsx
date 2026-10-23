@@ -110,6 +110,12 @@ function loadStoredUser() {
   }
 }
 
+// The params saved with a history entry, when the entry is for the page the address names; otherwise
+// whatever the address itself says.
+function savedParams(state, fromAddress) {
+  return state && state.page === fromAddress.page && state.params ? state.params : fromAddress.params;
+}
+
 function App() {
   // The logged-in user, as returned by POST /api/auth/login (null until signed in).
   const [user, setUser] = useState(loadStoredUser);
@@ -132,20 +138,40 @@ function App() {
     return fromPath(window.location.pathname).page ?? 'home';
   });
   const [navParams, setNavParams] = useState(() => (
-    loadStoredUser() ? fromPath(window.location.pathname).params : null
+    loadStoredUser() ? savedParams(window.history.state, fromPath(window.location.pathname)) : null
   ));
   // Bumped whenever the wallet balance changes anywhere (e.g. Navbar's Add Credit) so
   // pages showing wallet-derived figures (like the home dashboard) know to refetch.
   const [walletVersion, setWalletVersion] = useState(0);
   const bumpWalletVersion = () => setWalletVersion((v) => v + 1);
 
+  // Every history entry remembers its own place in this app's trail (idx), its page and its params —
+  // including the params that are not in the address (a customer scoped to a report, where a page was
+  // opened from). That is what lets Back return to exactly where the person was.
   const navigate = (page, params = null) => {
     setCurrentPage(page);
     setNavParams(params);
     const path = toPath(page, params);
-    if (window.location.pathname !== path) {
-      window.history.pushState(null, '', path);
+    const idx = window.history.state?.idx ?? 0;
+    try {
+      if (window.location.pathname !== path) {
+        window.history.pushState({ idx: idx + 1, page, params }, '', path);
+      } else {
+        window.history.replaceState({ idx, page, params }, '');
+      }
+    } catch {
+      // The params could not be stored with the entry; the address alone still works.
+      if (window.location.pathname !== path) window.history.pushState({ idx: idx + 1 }, '', path);
     }
+  };
+
+  // The Back every page uses. If the person got here from another screen of this app, step back to it
+  // (same screen, same filters), so Back and the browser's Back always agree and no loop of entries is
+  // left behind. If this page was opened directly (a refresh, a shared link) there is nothing to step
+  // back to, so it goes to the page's usual parent instead.
+  const goBack = (fallback = 'home', fallbackParams = null) => {
+    if ((window.history.state?.idx ?? 0) > 0) window.history.back();
+    else navigate(fallback, fallbackParams);
   };
 
   // Keeps the address bar in sync with browser Back/Forward, and normalizes it once on
@@ -153,16 +179,23 @@ function App() {
   // path visited while signed out) — without adding an extra history entry for that.
   useEffect(() => {
     const expected = toPath(currentPage, navParams);
-    if (window.location.pathname !== expected) {
-      // Keep the query string: tidying /pg-status/ to /pg-status must not throw away the
-      // token the gateway sent the payer back with.
-      window.history.replaceState(null, '', expected + window.location.search);
+    const entry = { idx: window.history.state?.idx ?? 0, page: currentPage, params: navParams };
+    try {
+      if (window.location.pathname !== expected) {
+        // Keep the query string: tidying /pg-status/ to /pg-status must not throw away the
+        // token the gateway sent the payer back with.
+        window.history.replaceState(entry, '', expected + window.location.search);
+      } else {
+        window.history.replaceState(entry, '');
+      }
+    } catch {
+      // Not storable — the address alone still works.
     }
 
-    const onPopState = () => {
-      const { page, params } = fromPath(window.location.pathname);
-      setCurrentPage(page ?? 'home');
-      setNavParams(params);
+    const onPopState = (e) => {
+      const from = fromPath(window.location.pathname);
+      setCurrentPage(from.page ?? 'home');
+      setNavParams(savedParams(e.state, from));
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -332,6 +365,7 @@ function App() {
             <CurrentPage
               key={pageKey}
               onNavigate={navigate}
+              onBack={goBack}
               navParams={navParams}
               user={user}
               walletVersion={walletVersion}

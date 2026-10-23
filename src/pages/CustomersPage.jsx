@@ -29,7 +29,7 @@ const PAGE_SIZE = 15;
 const rupees = (value) => `₹${Number(value ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const REPORT_MENU_HEIGHT = CUSTOMER_REPORTS.length * 44 + 16;
 
-const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
+const CustomersPage = ({ onNavigate, onBack, user, onWalletChanged }) => {
   const [customers, setCustomers] = useState([]);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -300,7 +300,7 @@ const CustomersPage = ({ onNavigate, user, onWalletChanged }) => {
         {/* Header: title and the one primary action */}
         <header className="cu-head">
           <div className="cu-head-text">
-            <button type="button" className="cu-back" onClick={() => onNavigate?.('home')} aria-label="Back to home">
+            <button type="button" className="cu-back" onClick={() => onBack?.('home')} aria-label="Back">
               <ArrowLeft size={18} />
             </button>
             <div>

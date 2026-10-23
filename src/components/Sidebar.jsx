@@ -1,10 +1,11 @@
 import React from 'react';
+import { WALLET_SETTLEMENT_NAV_DISABLED } from '../utils/disabledFeatures';
 import { BarChart3, Home, Settings as SettingsIcon, ShieldCheck, SlidersHorizontal, Users, Wallet } from 'lucide-react';
 
 // The same rail this app has always carried — only the styling is TamilPay's.
 const NAV_ITEMS = [
   { key: 'home', label: 'Home', Icon: Home },
-  { key: 'walletSettlement', label: 'Wallet & Settlement', Icon: Wallet },
+  { key: 'walletSettlement', label: 'Wallet & Settlement', Icon: Wallet, disabled: WALLET_SETTLEMENT_NAV_DISABLED },
   { key: 'customers', label: 'Customers', Icon: Users, adminOnly: true },
   { key: 'reports', label: 'Reports', Icon: BarChart3 },
   { key: 'admin', label: 'Admin', Icon: SettingsIcon, adminOnly: true },
@@ -36,12 +37,13 @@ const Sidebar = ({ user, currentPage, onNavigate }) => {
       </div>
 
       <nav className="app-sidebar-nav">
-        {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ key, label, Icon }) => (
+        {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map(({ key, label, Icon, disabled }) => (
           <button
             key={key}
             type="button"
-            title={collapsed ? label : undefined}
-            className={`app-sidebar-item${activeKey === key ? ' app-sidebar-item--active' : ''}`}
+            title={disabled ? `${label} — disabled` : collapsed ? label : undefined}
+            className={`app-sidebar-item${activeKey === key ? ' app-sidebar-item--active' : ''}${disabled ? ' app-sidebar-item--disabled' : ''}`}
+            disabled={disabled}
             onClick={() => onNavigate?.(key)}
           >
             <Icon size={18} strokeWidth={2.1} />

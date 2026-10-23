@@ -124,7 +124,7 @@ function errorFor(field, value) {
 }
 
 /** Credit card bill payment: pick the issuing bank, then enter that bank's card details. */
-const CardPaymentsPage = ({ onNavigate, user, onWalletChanged }) => {
+const CardPaymentsPage = ({ onNavigate, onBack, user, onWalletChanged }) => {
   const [billers, setBillers] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [query, setQuery] = useState('');
@@ -280,7 +280,7 @@ const CardPaymentsPage = ({ onNavigate, user, onWalletChanged }) => {
           <button
             type="button"
             className="ccp-back"
-            onClick={() => (biller ? choose(null) : onNavigate?.('home'))}
+            onClick={() => (biller ? choose(null) : onBack?.('home'))}
             aria-label={biller ? 'Back to all banks' : 'Back to home'}
           >
             <ArrowLeft size={22} />

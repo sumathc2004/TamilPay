@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Check, ClipboardList, RefreshCw, X } from 'lucide-react';
 import Modal from '../components/Modal';
+import BackButton from '../components/BackButton';
 import { apiUrl } from '../utils/api';
 import { pick } from '../utils/pick';
 import { qrRemarkParts } from '../utils/qrRemarks';
@@ -59,7 +60,7 @@ const Sub = ({ children }) => (
  * Reject actions), plus the full client-wide history below it. Separate from the
  * QR Codes page (which manages the QR inventory itself, not requests against it).
  */
-const QrRequestsPage = () => {
+const QrRequestsPage = ({ onBack }) => {
   const [pending, setPending] = useState(null);
   const [pendingError, setPendingError] = useState(null);
   const [pendingLoading, setPendingLoading] = useState(true);
@@ -167,8 +168,9 @@ const QrRequestsPage = () => {
   };
 
   return (
-    <div className="theme-purple" style={{ position: 'relative', minHeight: 'calc(100vh - 64px)', background: 'transparent' }}>
+    <div className="theme-purple" style={{ position: 'relative', minHeight: 'calc(100vh - var(--tp-bar, 92px))', background: 'transparent' }}>
       <div style={{ position: 'relative', zIndex: 2, padding: 'clamp(20px, 4vw, 32px)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <BackButton onClick={() => onBack?.('admin')} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--theme-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

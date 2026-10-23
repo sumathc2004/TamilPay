@@ -10,7 +10,7 @@ const rupees = (v) => `₹${Number(v ?? 0).toLocaleString('en-IN', { minimumFrac
  * their own customer id): who they are, their balance, and the PG commission earned on each. Read-only —
  * mapping a retailer is done by an admin.
  */
-const MyRetailersPage = ({ onNavigate, user }) => {
+const MyRetailersPage = ({ onBack, user }) => {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState('');
@@ -44,7 +44,7 @@ const MyRetailersPage = ({ onNavigate, user }) => {
       <div className="cu-inner">
         <header className="cu-head">
           <div className="cu-head-text">
-            <button type="button" className="cu-back" onClick={() => onNavigate?.('home')} aria-label="Back to home">
+            <button type="button" className="cu-back" onClick={() => onBack?.('home')} aria-label="Back">
               <ArrowLeft size={18} />
             </button>
             <div>
